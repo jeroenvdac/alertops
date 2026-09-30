@@ -195,7 +195,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div id="key-modal">
   <div class="km-box">
     <div class="km-title">AlertOps API Key</div>
-    <div class="km-hint">Your key is encrypted with AES-GCM (PBKDF2-derived, random IV + salt) and stored as a 30-day browser cookie. It is never sent to any third party.</div>
+    <div class="km-hint">Your key is obfuscated and stored as a 30-day browser cookie. It is only sent to your own server.</div>
     <input id="key-input" class="km-input" type="password" placeholder="Paste your AlertOps API key" autocomplete="off">
     <button id="key-save" class="km-save">Save &amp; Continue</button>
     <div id="key-err" class="km-err"></div>
@@ -204,37 +204,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <script>
 /* ── API key auth ──────────────────────────────────────────────────────── */
-var _ENC_PASS='alertops-scheduler-v1',_cachedKey=null;
+var _cachedKey=null;
 
 function _getCookie(n){var m=document.cookie.match(new RegExp('(?:^|; )'+n+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
 function _setCookie(n,v,a){document.cookie=n+'='+encodeURIComponent(v)+';path=/;max-age='+a+';SameSite=Strict';}
 function _clearCookie(n){document.cookie=n+'=;path=/;max-age=0';}
 
-async function _deriveKey(salt){
-  var enc=new TextEncoder();
-  var km=await crypto.subtle.importKey('raw',enc.encode(_ENC_PASS),'PBKDF2',false,['deriveKey']);
-  return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+function _encode(key){
+  var secret='ao-sched-2026',out='';
+  for(var i=0;i<key.length;i++) out+=String.fromCharCode(key.charCodeAt(i)^secret.charCodeAt(i%secret.length));
+  return btoa(out);
 }
-async function _encryptApiKey(plain){
-  var enc=new TextEncoder();
-  var salt=crypto.getRandomValues(new Uint8Array(16));
-  var iv=crypto.getRandomValues(new Uint8Array(12));
-  var key=await _deriveKey(salt);
-  var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,enc.encode(plain));
-  var out=new Uint8Array(28+ct.byteLength);
-  out.set(salt,0);out.set(iv,16);out.set(new Uint8Array(ct),28);
-  return btoa(String.fromCharCode.apply(null,out));
+function _decode(encoded){
+  var secret='ao-sched-2026',raw=atob(encoded),out='';
+  for(var i=0;i<raw.length;i++) out+=String.fromCharCode(raw.charCodeAt(i)^secret.charCodeAt(i%secret.length));
+  return out;
 }
-async function _decryptApiKey(b64){
-  var bytes=Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0);});
-  var key=await _deriveKey(bytes.slice(0,16));
-  var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes.slice(16,28)},key,bytes.slice(28));
-  return new TextDecoder().decode(pt);
-}
-async function _getKey(){
+
+function _getKey(){
   if(_cachedKey) return _cachedKey;
   var b64=_getCookie('ao_key'); if(!b64) return null;
-  try{_cachedKey=await _decryptApiKey(b64);return _cachedKey;}catch(e){return null;}
+  try{_cachedKey=_decode(b64);return _cachedKey;}catch(e){return null;}
 }
 
 // Intercept all /api/* fetches to inject the key header
@@ -242,7 +232,7 @@ var _realFetch=window.fetch.bind(window);
 window.fetch=async function(url,opts){
   opts=opts||{};
   if(typeof url==='string'&&url.startsWith('/api/')){
-    var k=await _getKey();
+    var k=_getKey();
     if(k) opts=Object.assign({},opts,{headers:Object.assign({},opts.headers||{},{'x-alertops-key':k})});
   }
   return _realFetch(url,opts);
@@ -255,12 +245,10 @@ function showKeyModal(onSaved){
     var val=document.getElementById('key-input').value.trim();
     if(!val){document.getElementById('key-err').textContent='Please enter a key.';return;}
     document.getElementById('key-err').textContent='';
-    _encryptApiKey(val).then(function(b64){
-      _setCookie('ao_key',b64,2592000);
-      _cachedKey=val;
-      modal.style.display='none';
-      if(onSaved) onSaved(); else toast('API key updated');
-    }).catch(function(e){document.getElementById('key-err').textContent='Error: '+e.message;});
+    _setCookie('ao_key',_encode(val),2592000);
+    _cachedKey=val;
+    modal.style.display='none';
+    if(onSaved) onSaved(); else toast('API key updated');
   }
   document.getElementById('key-save').onclick=doSave;
   document.getElementById('key-input').onkeydown=function(e){if(e.key==='Enter')doSave();};
@@ -268,8 +256,7 @@ function showKeyModal(onSaved){
 
 function initAuth(){
   return new Promise(function(resolve){
-    var b64=_getCookie('ao_key');
-    if(b64){resolve();return;}
+    if(_getCookie('ao_key')){resolve();return;}
     showKeyModal(resolve);
   });
 }
