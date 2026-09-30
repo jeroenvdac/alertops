@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    ports:
+      - "80:3000"
+    env_file: .env
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+    command: npx nodemon src/server.js

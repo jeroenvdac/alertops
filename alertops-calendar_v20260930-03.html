@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlertOps Scheduler</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f9fa;
+  --cols:92px repeat(7,1fr);--surface:#fff;--surface2:#f1f3f5;
+  --border:#dee2e6;--border2:#ced4da;
+  --text:#212529;--muted:#868e96;
+  --am:#3498DB;--am-bg:#dbeafe;--am-text:#1a5f8f;
+  --pm:#E67E22;--pm-bg:#fde8d3;--pm-text:#a8450d;
+  --today:#e8f4fd;--ok:#27ae60;--danger:#e03131;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-user-select:none;user-select:none;font-size:13px}
+
+.header{display:flex;align-items:center;gap:12px;padding:0 16px;height:48px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.header h1{font-size:15px;font-weight:600}
+.badge{font-size:11px;color:var(--muted);background:var(--surface2);padding:2px 8px;border-radius:4px;border:1px solid var(--border)}
+.spacer{flex:1}
+
+.toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.range{font-size:13px;font-weight:500;flex:1}
+.tbtn{font-size:12px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:5px 12px;border-radius:5px;cursor:pointer;font-family:inherit}
+.tbtn:hover{background:var(--border);color:var(--text)}
+.tbtn.primary{background:var(--am-bg);color:var(--am-text);border-color:var(--am);font-weight:500}
+.tbtn.warn{color:var(--danger)}
+
+.body{display:flex;flex:1;min-height:0}
+.cal{flex:1;display:flex;flex-direction:column;min-width:0}
+
+.day-headers{display:grid;grid-template-columns:var(--cols);background:var(--surface2);border-bottom:2px solid var(--border2);flex-shrink:0}
+.dh-corner{border-right:1px solid var(--border2);padding:6px 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.dh-days{display:contents}
+.dh{padding:6px 8px;font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-right:1px solid var(--border2);text-align:center}
+.dh:last-child{border-right:none}
+.dh.weekend{color:#aaa;background:var(--surface2);}
+
+.scroller{flex:1;overflow-y:auto;background:var(--surface)}
+.month-sep{position:sticky;top:0;z-index:5;background:var(--surface2);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);padding:5px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+.week-row{display:grid;grid-template-columns:var(--cols);border-bottom:2px solid var(--border2)}
+.week-row.today-week{background:var(--today)}
+.wk-label{grid-column:1;border-right:1px solid var(--border2);padding:8px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.wk-num{font-size:12px;font-weight:600}
+.wk-date{font-size:10px;color:var(--muted)}
+.wk-slots{grid-column:2/-1;display:flex;flex-direction:column;min-width:0}
+
+.band{display:grid;grid-template-columns:repeat(7,1fr);height:38px;border-bottom:1px solid var(--border);}
+.band:last-child{border-bottom:none}
+.band-tag{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--muted);pointer-events:none}
+.band.drop{background-color:rgba(52,152,219,.14);box-shadow:inset 0 0 0 2px var(--am)}
+.band.drop-bad{background-color:rgba(224,49,49,.1);box-shadow:inset 0 0 0 2px var(--danger)}
+.band>*{border-right:1px solid var(--border);}
+.band>*:last-child{border-right:none;}
+
+/* FTS readonly bands */
+.fts-band{position:relative;display:grid;border-bottom:1px solid var(--border);min-height:26px;}
+.fts-band:last-child{border-bottom:none}
+.fts-band-label{font-size:8px;font-weight:700;letter-spacing:.05em;color:var(--muted);padding:2px 4px 0;line-height:1.2;}
+.fts-day-cell{border-right:1px solid var(--border);padding:2px 3px;font-size:9px;line-height:1.3;}
+.fts-day-cell:last-child{border-right:none}
+.fts-chip{border-radius:3px;padding:1px 5px;margin-bottom:1px;font-size:9px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;}
+
+.pill{display:flex;align-items:center;gap:6px;grid-column:1/6;padding:5px 8px 5px 11px;border-radius:6px;font-size:12px;font-weight:500;cursor:grab;border:1px solid transparent;touch-action:none;align-self:center;margin:3px 3px;}.pill span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill:active{cursor:grabbing}
+.pill.am{background:var(--am-bg);color:var(--am-text);border-color:var(--am)}
+.pill.pm{background:var(--pm-bg);color:var(--pm-text);border-color:var(--pm)}
+.pill .x{width:15px;height:15px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;opacity:.45;cursor:pointer}
+.pill .x:hover{opacity:1;background:rgba(0,0,0,.1)}
+.pill.ghosted{opacity:.3}
+.pill.hl{box-shadow:0 0 0 2px currentColor}
+.empty{grid-column:1/6;font-size:11px;color:var(--border2);font-style:italic;pointer-events:none;display:flex;align-items:center;padding-left:8px}
+
+.sidebar{width:270px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column}
+.sb-sec{padding:12px;border-bottom:1px solid var(--border)}
+.sb-sec h3{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.hint{font-size:11px;color:var(--muted);line-height:1.5}
+.people{flex:1;overflow-y:auto;padding:12px}
+.people.trash{background:rgba(224,49,49,.07);box-shadow:inset 0 0 0 2px var(--danger)}
+.person{display:flex;align-items:center;gap:8px;padding:7px 9px;margin-bottom:5px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);cursor:grab;touch-action:none}
+.person:hover{border-color:var(--border2);background:#fff}
+.person:active{cursor:grabbing}
+.p-name{flex:1;font-size:12px;font-weight:500}
+.cnt{font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;min-width:24px;text-align:center}
+.cnt.am{background:var(--am-bg);color:var(--am-text)}
+.cnt.pm{background:var(--pm-bg);color:var(--pm-text)}
+.cnt.zero{background:var(--surface2);color:var(--border2)}
+
+.legend{display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--muted)}
+.li{display:flex;align-items:center;gap:7px}
+.ld{width:10px;height:10px;border-radius:2px}
+
+.fts-strip{display:flex;gap:8px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0}
+.fts-card{flex:1 1 0;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--surface2)}
+.fts-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.fts-key{font-size:12px;font-weight:700;letter-spacing:.03em}
+.fts-time{font-size:10px;color:var(--muted)}
+.fts-days{font-size:10px;color:var(--muted);margin-bottom:6px}
+.fts-primary{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.fts-who{font-size:13px;font-weight:600}
+.fts-now{font-size:9px;font-weight:700;letter-spacing:.04em;color:#27ae60;background:#e6f7ee;padding:2px 5px;border-radius:3px}
+.fts-queue{font-size:10px;color:var(--muted);line-height:1.5}
+#ghost{position:fixed;z-index:999;pointer-events:none;opacity:.92;transform:translate(-50%,-50%);box-shadow:0 4px 14px rgba(0,0,0,.2)}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(70px);background:#212529;color:#fff;padding:9px 16px;border-radius:6px;font-size:12px;transition:transform .2s;z-index:1000;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>AlertOps On-Call Scheduler</h1>
+  <span class="badge">JER-OnCall &middot; group 29931 &middot; demo data</span>
+  <div class="spacer"></div>
+  <span class="badge" id="stat">23 weeks</span>
+</div>
+
+<div class="toolbar">
+  <div class="range" id="range">&nbsp;</div>
+  <button class="tbtn primary" id="btn-today">Today</button>
+  <button class="tbtn" id="btn-top">Start</button>
+  <button class="tbtn" id="btn-end">End</button>
+  <button class="tbtn" id="btn-export">Export JSON</button>
+  <button class="tbtn warn" id="btn-reset">Reset</button>
+</div>
+
+<div class="body">
+  <div class="cal">
+    <div class="day-headers">
+      <div class="dh-corner">Week</div>
+      <div class="dh-days">
+        <div class="dh">Monday</div><div class="dh">Tuesday</div><div class="dh">Wednesday</div>
+        <div class="dh">Thursday</div><div class="dh">Friday</div>
+        <div class="dh weekend">Saturday</div><div class="dh weekend">Sunday</div>
+      </div>
+    </div>
+    <div class="scroller" id="scroller"></div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sb-sec">
+      <h3>How to edit</h3>
+      <div class="hint">
+        Drag a person from this list onto an AM or PM band.<br>
+        Drag a name between weeks to move it.<br>
+        Drop a name back on this list (or click &times;) to clear the slot.
+      </div>
+    </div>
+    <div class="sb-sec" style="padding-bottom:6px"><h3>Team &mdash; sorted by lowest total</h3></div>
+    <div class="people" id="people"></div>
+    <div class="sb-sec">
+      <div class="legend">
+        <div class="li" style="font-weight:600;margin-bottom:3px;color:var(--text)">Engineers</div>
+        <div class="li"><div class="ld" style="background:#FFC0CB"></div>Kalin B.</div>
+        <div class="li"><div class="ld" style="background:#FFD1B3"></div>Betina Y.</div>
+        <div class="li"><div class="ld" style="background:#E6E6FA"></div>Prathamesh R.</div>
+        <div class="li"><div class="ld" style="background:#DCD0FF"></div>Anton H.</div>
+        <div class="li"><div class="ld" style="background:#E3B5FA"></div>Denis P.</div>
+        <div class="li"><div class="ld" style="background:#AEC6CF"></div>Vladislav I.</div>
+        <div class="li"><div class="ld" style="background:#B0E0E6"></div>Bojidar G.</div>
+        <div class="li"><div class="ld" style="background:#87CEEB"></div>Stefan D.</div>
+        <div class="li"><div class="ld" style="background:#B5EAD7"></div>Vincent N.</div>
+        <div class="li"><div class="ld" style="background:#74B9FF"></div>William S.</div>
+        <div class="li"><div class="ld" style="background:#C1E1C1"></div>Jeroen V.</div>
+        <div class="li" style="margin-top:6px;font-weight:600;color:var(--text)">Bands (chronological)</div>
+        <div class="li"><div class="ld" style="background:var(--border2)"></div>EVE 00:01-01:00</div>
+        <div class="li"><div class="ld" style="background:var(--border2)"></div>NIGHT 01:00-08:00</div>
+        <div class="li"><div class="ld" style="background:var(--am)"></div>AM 08:00-13:00</div>
+        <div class="li"><div class="ld" style="background:var(--pm)"></div>PM 13:00-18:00</div>
+        <div class="li"><div class="ld" style="background:#c8e6c9"></div>DAY 08:00-18:00 (wknd)</div>
+        <div class="li"><div class="ld" style="background:var(--border2)"></div>EVE 18:00-23:59</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var DEFAULT_SCHEDULE = {
+  "2026-09-28":{am:"Kalin B.",      pm:"Betina Y."},
+  "2026-10-05":{am:"Prathamesh R.", pm:"Vincent N."},
+  "2026-10-12":{am:"Bojidar G.",    pm:"Anton H."},
+  "2026-10-19":{am:"Betina Y.",     pm:"Vladislav I."},
+  "2026-10-26":{am:"Kalin B.",      pm:"Stefan D."},
+  "2026-11-02":{am:"Denis P.",      pm:"William S."},
+  "2026-11-09":{am:"Vladislav I.",  pm:"Anton H."},
+  "2026-11-16":{am:"Bojidar G.",    pm:"Prathamesh R."},
+  "2026-11-23":{am:"Betina Y.",     pm:"Stefan D."},
+  "2026-11-30":{am:"Anton H.",      pm:"Prathamesh R."},
+  "2026-12-07":{am:"Kalin B.",      pm:"Vladislav I."},
+  "2026-12-14":{am:"Betina Y.",     pm:"Vincent N."},
+  "2026-12-21":{am:"Anton H.",      pm:"Stefan D."},
+  "2026-12-28":{am:"Prathamesh R.", pm:"Betina Y."},
+  "2027-01-04":{am:"Bojidar G.",    pm:"Denis P."},
+  "2027-01-11":{am:"Kalin B.",      pm:"Anton H."},
+  "2027-01-18":{am:"Vladislav I.",  pm:"Stefan D."},
+  "2027-01-25":{am:"Prathamesh R.", pm:"William S."},
+  "2027-02-01":{am:"Denis P.",      pm:"Bojidar G."},
+  "2027-02-08":{am:"Anton H.",      pm:"Stefan D."},
+  "2027-02-15":{am:"Kalin B.",      pm:"Vladislav I."},
+  "2027-02-22":{am:"Denis P.",      pm:"Prathamesh R."},
+  "2027-03-01":{am:"Vladislav I.",  pm:"Bojidar G."}
+};
+
+var PEOPLE_BASE = [
+  {name:"Kalin B.",      user:"kalin.bogdanov@accenture.com"},
+  {name:"Betina Y.",     user:"betina.yordanova@accenture.com"},
+  {name:"Prathamesh R.", user:"prathamesh.rain@accenture.com"},
+  {name:"Anton H.",      user:"anton.hulka@accenture.com"},
+  {name:"Denis P.",      user:"denis.penchev@accenture.com"},
+  {name:"Vladislav I.",  user:"vladislav.a.ivanov@accenture.com"},
+  {name:"Bojidar G.",    user:"bojidar.garmidolov@accenture.com"},
+  {name:"Stefan D.",     user:"stefan.dimitrov@accenture.com"},
+  {name:"Vincent N.",    user:"vincent.nees@accenture.com"},
+  {name:"William S.",    user:"william.symons@accenture.com"}
+];
+
+var SCHEDULE = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+var WEEKS = Object.keys(DEFAULT_SCHEDULE).sort();
+
+/* ── Person color palette — pastels ── */
+var PERSON_COLORS = {
+  "Kalin B.":      "#FFC0CB",
+  "Betina Y.":     "#FFD1B3",
+  "Prathamesh R.": "#E6E6FA",
+  "Anton H.":      "#DCD0FF",
+  "Denis P.":      "#E3B5FA",
+  "Vladislav I.":  "#AEC6CF",
+  "Bojidar G.":    "#B0E0E6",
+  "Stefan D.":     "#87CEEB",
+  "Vincent N.":    "#B5EAD7",
+  "William S.":    "#74B9FF",
+  "Jeroen V.":     "#C1E1C1"
+};
+
+function personColor(name){
+  return PERSON_COLORS[name] || "#95a5a6";
+}
+
+/* ── Follow-the-sun bands — live data from AlertOps group 29931 (JER-OnCall) ── */
+// days: 0=Mon,1=Tue,2=Wed,3=Thu,4=Fri,5=Sat,6=Sun
+// rotate_at: day of week when rotation advances (0=Mon..6=Sun)
+var FTS_BANDS = [
+  { label:"NIGHT1", time:"01:00-08:00", days:[0,1,2,6],
+    rotation_start:"2026-09-27", rotate_at:6, rotate_hour:1,
+    users:["Jeroen V.","Kalin B.","Denis P.","Stefan D.","Vincent N.","William S.","Prathamesh R."] },
+  { label:"NIGHT2", time:"01:00-08:00", days:[3,4,5],
+    rotation_start:"2026-09-30", rotate_at:3, rotate_hour:1,
+    users:["Vincent N.","William S.","Prathamesh R.","Jeroen V.","Kalin B.","Denis P.","Stefan D."] },
+  { label:"DAY1",   time:"08:00-18:00", days:[6],
+    rotation_start:"2026-09-27", rotate_at:6, rotate_hour:8,
+    users:["Jeroen V.","Denis P.","Stefan D.","Kalin B.","Vincent N.","William S.","Prathamesh R."] },
+  { label:"DAY2",   time:"08:00-18:00", days:[5],
+    rotation_start:"2026-09-30", rotate_at:5, rotate_hour:8,
+    users:["Vincent N.","William S.","Prathamesh R.","Jeroen V.","Denis P.","Stefan D.","Kalin B."] },
+  { label:"EVE1",   time:"18:00-01:00", days:[0,1,2,6],
+    rotation_start:"2026-09-27", rotate_at:6, rotate_hour:18,
+    users:["Jeroen V.","Stefan D.","Kalin B.","Denis P.","Vincent N.","William S.","Prathamesh R."] },
+  { label:"EVE2",   time:"18:00-01:00", days:[2,3,4,5],
+    rotation_start:"2026-09-30", rotate_at:2, rotate_hour:18,
+    users:["Vincent N.","William S.","Prathamesh R.","Jeroen V.","Stefan D.","Kalin B.","Denis P."] }
+];
+
+// Calculate who is primary for a given band on a given day.
+// AlertOps rotates on a specific day-of-week (rotate_at), counting from rotation_start.
+// We count how many times that rotation day has occurred since start_date.
+function getRotationPerson(band, day){
+  var start = new Date(band.rotation_start); start.setHours(0,0,0,0);
+  var d = new Date(day); d.setHours(0,0,0,0);
+  if(d < start) return { primary: band.users[0], next: band.users[1 % band.users.length] };
+  // rotate_at: 0=Mon..6=Sun; JS getDay: 0=Sun,1=Mon..6=Sat → (rotate_at+1)%7
+  var jsRotateDay = (band.rotate_at + 1) % 7;
+  // Find first occurrence of rotate day on or after start
+  var firstRotation = new Date(start);
+  var daysToFirst = (jsRotateDay - firstRotation.getDay() + 7) % 7;
+  firstRotation.setDate(firstRotation.getDate() + daysToFirst);
+  if(d < firstRotation) return { primary: band.users[0], next: band.users[1 % band.users.length] };
+  var weeks = Math.floor((d - firstRotation) / (7 * 24 * 60 * 60 * 1000));
+  var idx = weeks % band.users.length;
+  return {
+    primary: band.users[idx],
+    next:    band.users[(idx + 1) % band.users.length]
+  };
+}
+
+// Ordered rows: EVE-START (carry-over from prev day 00:00-01:00), NIGHT, DAY, AM, PM, EVE-END
+// eve-start = whichever EVE was active YESTERDAY (it runs until 01:00)
+var FTS_ROW_ORDER = [
+  { type:"eve-start", labels:["EVE2","EVE1"],     rowLabel:"EVE 00:01-01:00",
+    exclusive: true, use_prev_day: true },
+  { type:"night",     labels:["NIGHT1","NIGHT2"], rowLabel:"NIGHT 01:00-08:00" },
+  { type:"day",       labels:["DAY1","DAY2"],     rowLabel:"DAY 08:00-18:00 (wknd)" },
+  { type:"eve-end",   labels:["EVE2","EVE1"],     rowLabel:"EVE 18:00-23:59",
+    exclusive: true }
+];
+
+function getFtsByLabel(label){
+  return FTS_BANDS.filter(function(b){ return b.label===label; })[0];
+}
+
+function makeFtsBand(rowDef, weekMonday){
+  var band = document.createElement("div");
+  band.className = "fts-band";
+  band.style.gridTemplateColumns = "repeat(7,1fr)";
+
+  var lbl = document.createElement("div");
+  lbl.style.cssText = "grid-column:1/-1;font-size:8px;font-weight:700;color:var(--muted);padding:2px 6px 0;letter-spacing:.05em;border-bottom:0.5px solid var(--border2);background:var(--surface1);";
+  lbl.textContent = rowDef.rowLabel;
+  band.appendChild(lbl);
+
+  var row2 = document.createElement("div");
+  row2.style.cssText = "grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);";
+
+  // d=0=Mon...4=Fri, 5=Sat, 6=Sun
+  // Actual calendar day offsets: Mon=+0, Tue=+1, Wed=+2, Thu=+3, Fri=+4, Sat=+5, Sun=+6
+  for(var d=0;d<7;d++){
+    var actualDay = new Date(weekMonday.getTime() + d * 24*60*60*1000);
+    // For eve-start (00:00-01:00): this is carry-over from YESTERDAY's EVE shift
+    var calcDay = rowDef.use_prev_day
+      ? new Date(actualDay.getTime() - 24*60*60*1000)
+      : actualDay;
+    var cell = document.createElement("div");
+    cell.className = "fts-day-cell";
+    if(d>=5) cell.style.background = "var(--surface2)";
+
+    // For eve-start: check which day was active YESTERDAY (prevD)
+    var checkD = rowDef.use_prev_day ? (d + 6) % 7 : d;
+
+    if(rowDef.exclusive){
+      for(var li=0;li<rowDef.labels.length;li++){
+        var b = getFtsByLabel(rowDef.labels[li]);
+        if(!b || b.days.indexOf(checkD)===-1) continue;
+        var rot = getRotationPerson(b, calcDay);
+        var chip = document.createElement("div");
+        chip.className = "fts-chip";
+        chip.style.background = personColor(rot.primary);
+        chip.style.color = "#212529";
+        chip.textContent = b.label+": "+rot.primary;
+        chip.title = b.label+" ("+b.time+") — next: "+rot.next;
+        cell.appendChild(chip);
+        break;
+      }
+    } else {
+      rowDef.labels.forEach(function(label){
+        var b = getFtsByLabel(label);
+        if(!b || b.days.indexOf(checkD)===-1) return;
+        var rot = getRotationPerson(b, calcDay);
+        var chip = document.createElement("div");
+        chip.className = "fts-chip";
+        chip.style.background = personColor(rot.primary);
+        chip.style.color = "#212529";
+        chip.textContent = b.label+": "+rot.primary;
+        chip.title = b.label+" ("+b.time+") — next: "+rot.next;
+        cell.appendChild(chip);
+      });
+    }
+
+    row2.appendChild(cell);
+  }
+  band.appendChild(row2);
+  return band;
+}
+
+function buildFtsBands(slotsEl, weekMonday){
+  var eveStart  = makeFtsBand(FTS_ROW_ORDER[0], weekMonday);
+  var nightBand = makeFtsBand(FTS_ROW_ORDER[1], weekMonday);
+  var dayBand   = makeFtsBand(FTS_ROW_ORDER[2], weekMonday);
+  var eveEnd    = makeFtsBand(FTS_ROW_ORDER[3], weekMonday);
+
+  slotsEl.insertBefore(eveStart,  slotsEl.firstChild);
+  slotsEl.insertBefore(nightBand, slotsEl.children[1]);
+  slotsEl.appendChild(dayBand);
+  slotsEl.appendChild(eveEnd);
+}
+
+function buildFts(){ /* now inline in buildFtsBands */ }
+
+function pad(n){ return n<10?"0"+n:""+n; }
+function toKey(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function fromKey(k){ var p=k.split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
+function getMon(d){ var t=new Date(d),g=t.getDay(); t.setDate(t.getDate()-(g===0?6:g-1)); t.setHours(0,0,0,0); return t; }
+function addDays(d,n){ var t=new Date(d); t.setDate(t.getDate()+n); return t; }
+function isoWeek(d){
+  var t=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  t.setDate(t.getDate()+3-((t.getDay()+6)%7));
+  var w1=new Date(t.getFullYear(),0,4);
+  return 1+Math.round(((t-w1)/86400000-3+((w1.getDay()+6)%7))/7);
+}
+function fmtRange(k){
+  var m=fromKey(k),f=addDays(m,6);
+  return m.getDate()+" "+MONTHS[m.getMonth()].slice(0,3)+" - "+f.getDate()+" "+MONTHS[f.getMonth()].slice(0,3);
+}
+
+function toast(msg){
+  var t=document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._h); t._h=setTimeout(function(){ t.classList.remove("show"); },2000);
+}
+
+function counts(){
+  var c={};
+  PEOPLE_BASE.forEach(function(p){ c[p.name]={am:0,pm:0}; });
+  WEEKS.forEach(function(k){
+    var s=SCHEDULE[k]; if(!s) return;
+    if(s.am&&c[s.am]) c[s.am].am++;
+    if(s.pm&&c[s.pm]) c[s.pm].pm++;
+  });
+  return c;
+}
+
+function buildCal(){
+  var sc=document.getElementById("scroller");
+  var keep=sc.scrollTop;
+  sc.innerHTML="";
+  var todayKey=toKey(getMon(new Date()));
+  var lastMonth="";
+
+  WEEKS.forEach(function(k){
+    var mon=fromKey(k);
+    var mLabel=MONTHS[mon.getMonth()]+" "+mon.getFullYear();
+    if(mLabel!==lastMonth){
+      var sep=document.createElement("div");
+      sep.className="month-sep"; sep.textContent=mLabel;
+      sc.appendChild(sep); lastMonth=mLabel;
+    }
+
+    var row=document.createElement("div");
+    row.className="week-row"+(k===todayKey?" today-week":"");
+    row.dataset.key=k;
+
+    var lab=document.createElement("div");
+    lab.className="wk-label";
+    lab.innerHTML='<span class="wk-num">W'+isoWeek(mon)+'</span><span class="wk-date">'+fmtRange(k)+'</span>';
+    row.appendChild(lab);
+
+    var slots=document.createElement("div");
+    slots.className="wk-slots";
+
+    ["am","pm"].forEach(function(slot){
+      var band=document.createElement("div");
+      band.className="band";
+      band.dataset.key=k; band.dataset.slot=slot;
+
+      var who=SCHEDULE[k]?SCHEDULE[k][slot]:null;
+      if(who){
+        var pill=document.createElement("div");
+        pill.className="pill";
+        var bg=personColor(who);
+        pill.style.background=bg;
+        pill.style.borderColor=bg;
+        pill.style.color="#212529";
+        pill.style.fontWeight="600";
+        pill.dataset.name=who; pill.dataset.key=k; pill.dataset.slot=slot;
+        pill.innerHTML='<span>'+slot.toUpperCase()+': '+who+'</span><span class="x" data-clear="1">&times;</span>';
+        band.appendChild(pill);
+      } else {
+        var e=document.createElement("span");
+        e.className="empty"; e.textContent="unassigned";
+        band.appendChild(e);
+      }
+      // Weekend cols (6=Sat, 7=Sun)
+      for(var wi=0;wi<2;wi++){
+        var wc=document.createElement("div");
+        wc.style.cssText="background:var(--surface2);border-left:1px solid var(--border);";
+        band.appendChild(wc);
+      }
+
+      slots.appendChild(band);
+    });
+
+    // FTS readonly bands (NIGHT/EVE/DAY per weekday)
+    buildFtsBands(slots, mon);
+
+    row.appendChild(slots);
+    sc.appendChild(row);
+  });
+
+  sc.scrollTop=keep;
+  updateRange();
+}
+
+function buildPeople(){
+  var c=counts();
+  // Sort by total ascending
+  var sorted=PEOPLE_BASE.slice().sort(function(a,b){
+    return (c[a.name].am+c[a.name].pm)-(c[b.name].am+c[b.name].pm);
+  });
+
+  var box=document.getElementById("people");
+  box.innerHTML="";
+
+  // Column headers
+  var hdr=document.createElement("div");
+  hdr.style.cssText="display:flex;align-items:center;gap:8px;padding:2px 9px 6px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em";
+  hdr.innerHTML='<span style="flex:1">Name</span><span style="min-width:24px;text-align:center">AM</span><span style="min-width:24px;text-align:center">PM</span><span style="min-width:24px;text-align:center">Tot</span>';
+  box.appendChild(hdr);
+
+  sorted.forEach(function(p){
+    var am=c[p.name].am, pm=c[p.name].pm, tot=am+pm;
+    var d=document.createElement("div");
+    d.className="person"; d.dataset.name=p.name; d.title=p.user;
+    var dot=document.createElement("div");
+    dot.style.cssText="width:8px;height:8px;border-radius:50%;background:"+personColor(p.name)+";flex-shrink:0;";
+    d.appendChild(dot);
+    d.innerHTML+='<span class="p-name">'+p.name+'</span>'+
+      '<span class="cnt am'+(am?"":" zero")+'">'+am+'</span>'+
+      '<span class="cnt pm'+(pm?"":" zero")+'">'+pm+'</span>'+
+      '<span class="cnt'+(tot?" zero":"")+'" style="background:var(--surface2);color:var(--text);font-weight:700">'+tot+'</span>';
+    box.appendChild(d);
+  });
+
+  var gaps=0;
+  WEEKS.forEach(function(k){ var s=SCHEDULE[k]||{}; if(!s.am) gaps++; if(!s.pm) gaps++; });
+  document.getElementById("stat").textContent=WEEKS.length+" weeks &middot; "+(WEEKS.length*2-gaps)+"/"+(WEEKS.length*2)+" filled";
+}
+
+function updateRange(){
+  var sc=document.getElementById("scroller");
+  var rows=sc.querySelectorAll(".week-row");
+  var top=sc.scrollTop,bot=top+sc.clientHeight,first=null,last=null;
+  rows.forEach(function(r){
+    var a=r.offsetTop,b=a+r.offsetHeight;
+    if(b>top+30&&a<bot){ if(!first)first=r; last=r; }
+  });
+  if(first&&last){
+    document.getElementById("range").textContent=
+      fmtRange(first.dataset.key)+" "+fromKey(first.dataset.key).getFullYear()+
+      "  ->  "+fmtRange(last.dataset.key)+" "+fromKey(last.dataset.key).getFullYear();
+  }
+}
+
+function render(){ buildCal(); buildPeople(); buildFts(); }
+
+function setSlot(key,slot,name){
+  if(!SCHEDULE[key]) SCHEDULE[key]={};
+  if(name) SCHEDULE[key][slot]=name;
+  else delete SCHEDULE[key][slot];
+}
+function getSlot(key,slot){ return SCHEDULE[key]?SCHEDULE[key][slot]:null; }
+
+function clearSlot(key,slot){
+  var was=getSlot(key,slot); if(!was) return;
+  setSlot(key,slot,null); render();
+  toast(was+" removed from "+slot.toUpperCase()+" W"+isoWeek(fromKey(key)));
+}
+
+/* drag & drop */
+var drag=null;
+
+document.addEventListener("pointerdown",function(e){
+  var x=e.target.closest("[data-clear]");
+  if(x){ var pl=x.closest(".pill"); clearSlot(pl.dataset.key,pl.dataset.slot); e.preventDefault(); return; }
+  var src=e.target.closest(".pill, .person");
+  if(!src||e.button!==0) return;
+  drag={name:src.dataset.name, from:src.classList.contains("pill")?{key:src.dataset.key,slot:src.dataset.slot}:null,
+    el:src, startX:e.clientX, startY:e.clientY, active:false, over:null};
+  e.preventDefault();
+});
+
+document.addEventListener("pointermove",function(e){
+  if(!drag) return;
+  if(!drag.active){
+    if(Math.abs(e.clientX-drag.startX)<4&&Math.abs(e.clientY-drag.startY)<4) return;
+    drag.active=true;
+    var g=document.createElement("div"); g.id="ghost";
+    g.className="pill";
+    g.style.margin="0";
+    g.style.background=personColor(drag.name);
+    g.style.borderColor=personColor(drag.name);
+    g.style.color="#212529";
+    g.innerHTML='<span>'+drag.name+'</span>';
+    document.body.appendChild(g); drag.ghost=g;
+    if(drag.from) drag.el.classList.add("ghosted");
+    document.body.style.cursor="grabbing";
+  }
+  drag.ghost.style.left=e.clientX+"px"; drag.ghost.style.top=e.clientY+"px";
+  document.querySelectorAll(".band.drop,.band.drop-bad").forEach(function(b){b.classList.remove("drop","drop-bad");});
+  document.getElementById("people").classList.remove("trash");
+
+  var under=document.elementFromPoint(e.clientX,e.clientY);
+  var band=under?under.closest(".band"):null;
+  var panel=under?under.closest("#people"):null;
+
+  if(band){
+    drag.over={type:"band",key:band.dataset.key,slot:band.dataset.slot};
+    band.classList.add("drop");
+    if(drag.ghost) drag.ghost.className="pill "+band.dataset.slot;
+  } else if(panel&&drag.from){
+    drag.over={type:"trash"};
+    panel.classList.add("trash");
+  } else { drag.over=null; }
+});
+
+document.addEventListener("pointerup",function(){
+  if(!drag) return;
+  var d=drag; drag=null;
+  document.body.style.cursor="";
+  if(d.ghost) d.ghost.remove();
+  if(d.el) d.el.classList.remove("ghosted");
+  document.querySelectorAll(".band.drop,.band.drop-bad").forEach(function(b){b.classList.remove("drop","drop-bad");});
+  document.getElementById("people").classList.remove("trash");
+  if(!d.active||!d.over) return;
+
+  if(d.over.type==="trash"){
+    clearSlot(d.from.key,d.from.slot); return;
+  }
+
+  var tk=d.over.key,ts=d.over.slot;
+  if(d.from&&d.from.key===tk&&d.from.slot===ts) return;
+  var occupant=getSlot(tk,ts);
+
+  if(d.from){
+    setSlot(tk,ts,d.name);
+    setSlot(d.from.key,d.from.slot,occupant||null);
+    render();
+    toast(occupant?d.name+" & "+occupant+" swapped":d.name+" moved to "+ts.toUpperCase()+" W"+isoWeek(fromKey(tk)));
+  } else {
+    setSlot(tk,ts,d.name);
+    render();
+    toast(occupant?d.name+" replaces "+occupant+" in "+ts.toUpperCase()+" W"+isoWeek(fromKey(tk)):d.name+" assigned to "+ts.toUpperCase()+" W"+isoWeek(fromKey(tk)));
+  }
+});
+
+document.addEventListener("keydown",function(e){
+  if(e.key==="Escape"&&drag){
+    if(drag.ghost) drag.ghost.remove();
+    if(drag.el) drag.el.classList.remove("ghosted");
+    document.querySelectorAll(".band.drop,.band.drop-bad").forEach(function(b){b.classList.remove("drop","drop-bad");});
+    document.getElementById("people").classList.remove("trash");
+    document.body.style.cursor=""; drag=null;
+  }
+});
+
+document.addEventListener("mouseover",function(e){
+  var p=e.target.closest(".person"); if(!p) return;
+  document.querySelectorAll(".pill").forEach(function(pl){ pl.classList.toggle("hl",pl.dataset.name===p.dataset.name); });
+});
+document.addEventListener("mouseout",function(e){
+  if(e.target.closest(".person")) document.querySelectorAll(".pill.hl").forEach(function(pl){pl.classList.remove("hl");});
+});
+
+document.getElementById("btn-today").onclick=function(){
+  var key=toKey(getMon(new Date()));
+  var row=document.querySelector('.week-row[data-key="'+key+'"]');
+  if(row) row.scrollIntoView({block:"center",behavior:"smooth"});
+  else toast("Today is outside the schedule range");
+};
+document.getElementById("btn-top").onclick=function(){ document.getElementById("scroller").scrollTo({top:0,behavior:"smooth"}); };
+document.getElementById("btn-end").onclick=function(){ var s=document.getElementById("scroller"); s.scrollTo({top:s.scrollHeight,behavior:"smooth"}); };
+document.getElementById("btn-reset").onclick=function(){
+  SCHEDULE=JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)); render(); toast("Schedule reset");
+};
+document.getElementById("btn-export").onclick=function(){
+  var userMap={}; PEOPLE_BASE.forEach(function(p){ userMap[p.name]=p.user; });
+  var out=WEEKS.map(function(k){
+    var s=SCHEDULE[k]||{};
+    return {week_start:k, am:s.am?{display:s.am,user:userMap[s.am]}:null, pm:s.pm?{display:s.pm,user:userMap[s.pm]}:null};
+  });
+  var blob=new Blob([JSON.stringify({group_id:29931,timezone:"(UTC+01:00) Brussels, Copenhagen, Madrid, Paris",am:"08:00-13:00",pm:"13:00-18:00",weeks:out},null,2)],{type:"application/json"});
+  var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="rotation.json"; a.click();
+  toast("rotation.json downloaded");
+};
+
+document.getElementById("scroller").addEventListener("scroll",updateRange);
+render();
+var t=document.querySelector(".week-row.today-week");
+if(t) t.scrollIntoView({block:"center"});
+</script>
+</body>
+</html>
