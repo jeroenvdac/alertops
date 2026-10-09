@@ -644,6 +644,18 @@ async function loadFromAPI(){
       DEFAULT_SCHEDULE=JSON.parse(JSON.stringify(SCHEDULE));
       WEEKS=Object.keys(SCHEDULE).sort();
 
+      // Verleng kalender t/m 2035 met lege weken
+      var extendTo=new Date('2035-12-29');
+      var lastKnown=WEEKS.length?fromKey(WEEKS[WEEKS.length-1]):getMon(new Date());
+      var extCur=addDays(lastKnown,7);
+      while(extCur<=extendTo){
+        var extKey=toKey(extCur);
+        if(!SCHEDULE[extKey])SCHEDULE[extKey]={};
+        if(WEEKS.indexOf(extKey)===-1)WEEKS.push(extKey);
+        extCur=addDays(extCur,7);
+      }
+      WEEKS.sort();
+
       // Build FTS bands
       FTS_BANDS=ftsItems.map(buildBandFromItem);
     }
