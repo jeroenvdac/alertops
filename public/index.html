@@ -1069,18 +1069,33 @@ async function pushSchedule(){
   var changes=[];
   WEEKS.forEach(function(k){
     ['am','pm'].forEach(function(slot){
-      // week-level changes
-      var cur=(SCHEDULE[k]&&SCHEDULE[k][slot])||null;
-      var orig=(DEFAULT_SCHEDULE[k]&&DEFAULT_SCHEDULE[k][slot])||null;
-      if(cur!==orig){
-        var schedObj=AM_PM_SCHEDULES[k]&&AM_PM_SCHEDULES[k][slot];
-        var personObj=cur?PEOPLE_BASE.find(function(p){return p.name===cur;}):null;
-        var email=personObj?personObj.user:'';
-        changes.push({type:'week',k:k,slot:slot,schedObj:schedObj,cur:cur,email:email,isNew:!schedObj});
-      }
-      // day-level changes
       var curDays=(SCHEDULE[k]&&SCHEDULE[k][slot+'_days'])||{};
       var origDays=(DEFAULT_SCHEDULE[k]&&DEFAULT_SCHEDULE[k][slot+'_days'])||{};
+      var hasCurDays=Object.keys(curDays).some(function(d){return curDays[d];});
+      var hasOrigDays=Object.keys(origDays).some(function(d){return origDays[d];});
+
+      // Als er nu dag-assignments zijn en er was een week-schedule → DELETE week-schedule eerst
+      if(hasCurDays){
+        var origWeek=(DEFAULT_SCHEDULE[k]&&DEFAULT_SCHEDULE[k][slot])||null;
+        var weekSchedObj=AM_PM_SCHEDULES[k]&&AM_PM_SCHEDULES[k][slot];
+        if(origWeek&&weekSchedObj){
+          changes.push({type:'delete-week',k:k,slot:slot,schedObj:weekSchedObj});
+        }
+      }
+
+      // week-level changes (alleen als er geen dag-assignments zijn)
+      if(!hasCurDays){
+        var cur=(SCHEDULE[k]&&SCHEDULE[k][slot])||null;
+        var orig=(DEFAULT_SCHEDULE[k]&&DEFAULT_SCHEDULE[k][slot])||null;
+        if(cur!==orig){
+          var schedObj=AM_PM_SCHEDULES[k]&&AM_PM_SCHEDULES[k][slot];
+          var personObj=cur?PEOPLE_BASE.find(function(p){return p.name===cur;}):null;
+          var email=personObj?personObj.user:'';
+          changes.push({type:'week',k:k,slot:slot,schedObj:schedObj,cur:cur,email:email,isNew:!schedObj});
+        }
+      }
+
+      // day-level changes
       var allDayKeys=Object.keys(Object.assign({},curDays,origDays));
       allDayKeys.forEach(function(dayKey){
         var curD=curDays[dayKey]||null;
@@ -1088,7 +1103,6 @@ async function pushSchedule(){
         if(curD===origD)return;
         var personObj=curD?PEOPLE_BASE.find(function(p){return p.name===curD;}):null;
         var email=personObj?personObj.user:'';
-        // zoek bestaand dag-schedule object
         var daySchedObj=AM_PM_SCHEDULES[k]&&AM_PM_SCHEDULES[k][slot+'_day_'+dayKey];
         changes.push({type:'day',k:k,slot:slot,dayKey:dayKey,cur:curD,email:email,schedObj:daySchedObj,isNew:!daySchedObj});
       });
@@ -1104,7 +1118,16 @@ async function pushSchedule(){
     var ch=changes[i];
     try{
       var res;
-      if(ch.type==='day'){
+      if(ch.type==='delete-week'){
+        // DELETE bestaand week-schedule want dag-mode is nu actief
+        res=await fetch('/api/schedules/'+ch.schedObj.schedule_id,{method:'DELETE'});
+        if(res.ok||res.status===204){
+          ok++;
+          if(AM_PM_SCHEDULES[ch.k])delete AM_PM_SCHEDULES[ch.k][ch.slot];
+          if(DEFAULT_SCHEDULE[ch.k])delete DEFAULT_SCHEDULE[ch.k][ch.slot];
+          if(SCHEDULE[ch.k])delete SCHEDULE[ch.k][ch.slot];
+        }else{fail++;console.warn('DELETE week failed',ch.slot,ch.k,res.status,await res.text());}
+      }else if(ch.type==='day'){
         // dag-schedule
         var isAm=ch.slot==='am';
         var dow=new Date(ch.dayKey).getDay(); // 0=Sun,1=Mon...
