@@ -883,7 +883,7 @@ function buildCal(){
           wc2.style.cssText=(wdHols2.length?"background:var(--hol-cell)":"background:var(--surface2)")+";border-left:1px solid var(--border);";
           botRow.appendChild(wc2);
         }
-        dayBand.appendChild(botRow);
+        if(!hasDays)dayBand.appendChild(botRow);
         slots.appendChild(dayBand);
       }
     });
