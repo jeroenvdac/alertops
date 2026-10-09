@@ -1159,6 +1159,25 @@ async function pushSchedule(){
               if(!AM_PM_SCHEDULES[ch.k])AM_PM_SCHEDULES[ch.k]={};
               AM_PM_SCHEDULES[ch.k][ch.slot+'_day_'+ch.dayKey]=created;
             }
+          }else if(res.status===400){
+            // Schedule may already exist — fetch it and PUT instead
+            var errTxt=await res.text();
+            if(errTxt.indexOf('already exists')!==-1){
+              var allScheds=await fetch('/api/schedules').then(function(r){return r.json();}).catch(function(){return[];});
+              var schedList=Array.isArray(allScheds)?allScheds:(allScheds.schedules||allScheds.data||[]);
+              var existingName=(ch.slot==='am'?'AM':'PM')+' '+ch.dayKey;
+              var existing=schedList.find(function(s){return s.schedule_name===existingName;});
+              if(existing){
+                var putBody=JSON.parse(JSON.stringify(existing));
+                putBody.users=[{user:ch.email,role:'Primary'}];
+                var putRes=await fetch('/api/schedules/'+existing.schedule_id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(putBody)});
+                if(putRes.ok||putRes.status===204){
+                  ok++;
+                  if(!AM_PM_SCHEDULES[ch.k])AM_PM_SCHEDULES[ch.k]={};
+                  AM_PM_SCHEDULES[ch.k][ch.slot+'_day_'+ch.dayKey]=existing;
+                }else{fail++;console.warn('PUT existing day failed',ch.slot,ch.dayKey,putRes.status,await putRes.text());}
+              }else{fail++;console.warn('Could not find existing schedule',existingName);}
+            }else{fail++;console.warn('POST day failed',ch.slot,ch.dayKey,res.status,errTxt);}
           }else{fail++;console.warn('POST day failed',ch.slot,ch.dayKey,res.status,await res.text());}
         }else if(!ch.isNew&&ch.schedObj){
           if(ch.cur&&ch.email){
