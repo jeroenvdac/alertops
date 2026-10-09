@@ -5,3 +5,5 @@ services:
       - "80:3000"
     env_file: .env
     restart: unless-stopped
+    volumes:
+      - ./public:/app/public

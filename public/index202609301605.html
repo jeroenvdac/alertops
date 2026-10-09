@@ -14,8 +14,6 @@
   --am:#3498DB;--am-bg:#dbeafe;--am-text:#1a5f8f;
   --pm:#E67E22;--pm-bg:#fde8d3;--pm-text:#a8450d;
   --today:#e8f4fd;--ok:#27ae60;--danger:#e03131;
-  --hol-col:rgba(253,215,30,.13);
-  --hol-cell:rgba(253,215,30,.38);
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-user-select:none;user-select:none;font-size:13px}
 .header{display:flex;align-items:center;gap:12px;padding:0 16px;height:48px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
@@ -41,20 +39,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .dh.weekend{color:#aaa;background:var(--surface2)}
 .scroller{flex:1;overflow-y:auto;background:var(--surface)}
 .month-sep{position:sticky;top:0;z-index:5;background:var(--surface2);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);padding:5px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.week-row{display:grid;grid-template-columns:var(--cols);border-bottom:2px solid var(--border2);position:relative;}
+.week-row{display:grid;grid-template-columns:var(--cols);border-bottom:2px solid var(--border2)}
 .week-row.today-week{background:var(--today)}
-.wk-label{grid-column:1;border-right:1px solid var(--border2);padding:8px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;z-index:1;}
+.wk-label{grid-column:1;border-right:1px solid var(--border2);padding:8px;display:flex;flex-direction:column;justify-content:center;gap:2px}
 .wk-num{font-size:12px;font-weight:600}
 .wk-date{font-size:10px;color:var(--muted)}
-.wk-slots{grid-column:2/-1;display:flex;flex-direction:column;min-width:0;position:relative;z-index:1;}
-.hol-col-bg{position:absolute;top:0;bottom:0;background:var(--hol-col);pointer-events:none;z-index:0;border-left:2px solid rgba(253,215,30,.5);}
-.hol-row{display:grid;grid-template-columns:repeat(7,1fr);min-height:18px;border-bottom:1px solid var(--border2);}
-.hol-cell{border-right:1px solid var(--border);padding:1px 4px;display:flex;gap:4px;align-items:center;}
-.hol-cell:last-child{border-right:none}
-.hol-date{font-size:10px;font-weight:600;color:var(--muted);min-width:14px;flex-shrink:0;line-height:1;}
-.hol-badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;line-height:14px;cursor:default;letter-spacing:.04em;white-space:nowrap;}
-.hol-be{background:#FAD70B;color:#1a1a1a;}
-.hol-bg{background:#007B5E;color:#fff;}
+.wk-slots{grid-column:2/-1;display:flex;flex-direction:column;min-width:0}
 .band{display:grid;grid-template-columns:repeat(7,1fr);height:38px;border-bottom:1px solid var(--border)}
 .band:last-child{border-bottom:none}
 .band.drop{background-color:rgba(52,152,219,.14);box-shadow:inset 0 0 0 2px var(--am)}
@@ -75,12 +65,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .pill .x:hover{opacity:1;background:rgba(0,0,0,.1)}
 .pill.ghosted{opacity:.3}
 .pill.hl{box-shadow:0 0 0 2px currentColor}
-.pill.ooo{opacity:.5;filter:grayscale(.4)}
-.ooo-cover{font-size:10px;color:var(--ok);padding:1px 6px 3px;display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#ooo-tip{position:fixed;z-index:9999;background:#1e2637;color:#e2e8f0;border:1px solid #f87171;border-radius:7px;padding:9px 13px;font-size:11px;line-height:1.7;pointer-events:none;display:none;max-width:240px;box-shadow:0 6px 20px rgba(0,0,0,.4)}
-.ot-title{font-weight:700;color:#f87171;margin-bottom:3px;letter-spacing:.03em}
-.ot-time{color:#7dd3fc;font-family:monospace;font-size:12px}
-.ot-who{color:#94a3b8;margin-top:2px}
 .empty{grid-column:1/6;font-size:11px;color:var(--border2);font-style:italic;pointer-events:none;display:flex;align-items:center;padding-left:8px}
 .sidebar{width:270px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column}
 .sb-sec{padding:12px;border-bottom:1px solid var(--border)}
@@ -105,7 +89,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:5000;gap:12px;font-size:14px;color:var(--muted)}
 .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--am);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-
+#key-modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:10000}
 .km-box{background:#1e2637;border:1px solid #2a3650;border-radius:10px;padding:28px 30px;width:340px;display:flex;flex-direction:column;gap:14px}
 .km-title{font-size:15px;font-weight:700;color:#e2e8f0}
 .km-hint{font-size:11px;color:#64748b;line-height:1.5}
@@ -114,6 +98,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .km-save{background:#3b82f6;border:none;color:#fff;font-weight:700;padding:9px;border-radius:5px;cursor:pointer;font-size:13px;font-family:inherit}
 .km-save:hover{background:#2563eb}
 .km-err{color:#f87171;font-size:11px;min-height:14px}
+.btn-key{font-size:13px;background:none;border:1px solid var(--border);border-radius:4px;padding:3px 7px;cursor:pointer;color:var(--muted);line-height:1;margin-left:6px}
+.btn-key:hover{background:var(--surface2);color:var(--text)}
 </style>
 </head>
 <body>
@@ -121,9 +107,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="header">
   <h1>AlertOps On-Call Scheduler</h1>
   <span class="badge" id="badge">Loading…</span>
-  <span class="badge" id="hol-stat" style="color:var(--muted)">loading holidays…</span>
   <div class="spacer"></div>
   <span class="badge" id="stat"></span>
+  <button class="btn-key" id="btn-key" title="Change AlertOps API key">&#128273;</button>
 </div>
 
 <div class="toolbar">
@@ -157,10 +143,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div class="people" id="people"></div>
     <div class="sb-sec">
       <div class="legend">
-        <div class="li" style="font-weight:600;color:var(--text)">Public holidays</div>
-        <div class="li"><div class="ld" style="background:#FAD70B;border:1px solid #ccc"></div>BE – Belgium</div>
-        <div class="li"><div class="ld" style="background:#007B5E"></div>BG – Bulgaria</div>
-        <div class="li" style="font-weight:600;margin-top:6px;color:var(--text)">Bands (chronological)</div>
+        <div class="li" style="font-weight:600;margin-bottom:3px;color:var(--text)">Bands (chronological)</div>
         <div class="li"><div class="ld" style="background:var(--border2)"></div>EVE 00:01-01:00</div>
         <div class="li"><div class="ld" style="background:var(--border2)"></div>NIGHT 01:00-08:00</div>
         <div class="li"><div class="ld" style="background:var(--am)"></div>AM 08:00-13:00</div>
@@ -173,157 +156,59 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 
 <div id="toast"></div>
-<div id="ooo-tip">
-  <div class="ot-title">Out of Office override</div>
-  <div class="ot-time" id="ot-time"></div>
-  <div class="ot-who" id="ot-who"></div>
-</div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     API DEBUG LOG — view in DevTools > Elements or View Source
-     API key is always redacted
-     ═══════════════════════════════════════════════════════════ -->
-<div id="api-debug-log" style="display:none"></div>
-  </div>
-</div>
-
-<div id="login-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:10001">
+<div id="key-modal">
   <div class="km-box">
-    <div class="km-title">AlertOps Login</div>
-    <div class="km-hint">Je sessie verloopt na ~8u. Credentials worden nergens opgeslagen.</div>
-    <input id="lm-user" class="km-input" type="text" placeholder="gebruikersnaam@accenture.com" value="jeroen.van.daele@accenture.com" autocomplete="username">
-    <input id="lm-pass" class="km-input" type="password" placeholder="Wachtwoord" autocomplete="current-password" style="margin-top:8px">
-    <button id="lm-save" class="km-save" style="margin-top:8px">Inloggen</button>
-    <div id="lm-err" class="km-err"></div>
+    <div class="km-title">AlertOps API Key</div>
+    <div class="km-hint">Your key is obfuscated and stored as a 30-day browser cookie. It is only sent to your own server.</div>
+    <input id="key-input" class="km-input" type="password" placeholder="Paste your AlertOps API key" autocomplete="off">
+    <button id="key-save" class="km-save">Save &amp; Continue</button>
+    <div id="key-err" class="km-err"></div>
   </div>
 </div>
 
 <script>
-/* ── API key — in-memory only, nooit opgeslagen ── */
-var _cachedKey = null;
-function _getKey(){ return _cachedKey; }
-var _realFetch = window.fetch.bind(window);
-var _debugLog=[];
-function _redact(str){
-  try{
-    var o=JSON.parse(str);
-    function scrub(x){if(!x||typeof x!=='object')return x;var r=Array.isArray(x)?[]:{};Object.keys(x).forEach(function(k){if(/api.?key|x-alertops/i.test(k))r[k]='[REDACTED]';else r[k]=scrub(x[k]);});return r;}
-    return JSON.stringify(scrub(o),null,2);
-  }catch(e){return str;}
-}
-function _writeDebugComment(entry){
-  var container=document.getElementById('api-debug-log');
-  if(!container)return;
-  var preview=entry.preview||'(no body)';
-  var comment=document.createComment(
-    '\n  ['+entry.time+'] '+entry.method+' '+entry.url+
-    '\n  Status : '+entry.status+
-    '\n  Time   : '+entry.ms+'ms'+
-    '\n  Response:\n'+preview.split('\n').map(function(l){return'  '+l;}).join('\n')+
-    '\n'
-  );
-  container.appendChild(comment);
-}
+/* ── API key auth ── */
+var _cachedKey=null;
+function _getCookie(n){var m=document.cookie.match(new RegExp('(?:^|; )'+n+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;}
+function _setCookie(n,v,a){document.cookie=n+'='+encodeURIComponent(v)+';path=/;max-age='+a+';SameSite=Strict';}
+function _clearCookie(n){document.cookie=n+'=;path=/;max-age=0';}
+function _encode(key){var s='ao-sched-2026',o='';for(var i=0;i<key.length;i++)o+=String.fromCharCode(key.charCodeAt(i)^s.charCodeAt(i%s.length));return btoa(o);}
+function _decode(e){var s='ao-sched-2026',r=atob(e),o='';for(var i=0;i<r.length;i++)o+=String.fromCharCode(r.charCodeAt(i)^s.charCodeAt(i%s.length));return o;}
+function _getKey(){if(_cachedKey)return _cachedKey;var b=_getCookie('ao_key');if(!b)return null;try{_cachedKey=_decode(b);return _cachedKey;}catch(e){return null;}}
+var _realFetch=window.fetch.bind(window);
 window.fetch=function(url,opts){
   opts=opts||{};
-  var isApi=typeof url==='string'&&url.startsWith('/api/');
-  if(isApi){var k=_getKey();if(k)opts=Object.assign({},opts,{headers:Object.assign({},opts.headers||{},{'x-alertops-key':k})});}
-  var t0=Date.now();
-  var method=(opts.method||'GET').toUpperCase();
-  var now=new Date();
-  var timeStr=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
-  return _realFetch(url,opts).then(function(res){
-    if(isApi){
-      var ms=Date.now()-t0;
-      res.clone().text().then(function(body){
-        var entry={time:timeStr,method:method,url:url,status:res.status,ms:ms,preview:_redact(body)};
-        _debugLog.push(entry);
-        if(_debugLog.length>50)_debugLog.shift();
-        _writeDebugComment(entry);
-      });
-    }
-    return res;
-  }).catch(function(err){
-    if(isApi){var entry={time:timeStr,method:method,url:url,status:'ERR',ms:Date.now()-t0,preview:err.message};_debugLog.push(entry);_writeDebugComment(entry);}
-    throw err;
-  });
-};
-function initAuth(){
-  return Promise.resolve(); // login modal in ensureJwt doet alles
-}
-
-/* ── JWT / v3 auth ── */
-var _jwtToken = null;
-var _jwtExpiry = 0;
-
-function _isJwtValid(){
-  return _jwtToken && Date.now() < _jwtExpiry - 60000; // 1 min marge
-}
-
-function showLoginModal(onDone){
-  var modal = document.getElementById('login-modal');
-  modal.style.display = 'flex';
-  document.getElementById('lm-err').textContent = '';
-  document.getElementById('lm-pass').value = '';
-  document.getElementById('lm-pass').focus();
-
-  function doLogin(){
-    var user = document.getElementById('lm-user').value.trim();
-    var pass = document.getElementById('lm-pass').value;
-    if(!user || !pass){ document.getElementById('lm-err').textContent = 'Vul gebruikersnaam en wachtwoord in.'; return; }
-    document.getElementById('lm-save').disabled = true;
-    document.getElementById('lm-err').textContent = '';
-    fetch('/api/v3/login', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({account:'acn-cloudfirst', user_name:user, password:pass})
-    }).then(function(r){ return r.json(); }).then(function(data){
-      document.getElementById('lm-save').disabled = false;
-      if(!data.token){ document.getElementById('lm-err').textContent = 'Login mislukt: ' + (data.message || JSON.stringify(data)); return; }
-      _jwtToken = data.token;
-      try{
-        var payload = JSON.parse(atob(_jwtToken.split('.')[1]));
-        _jwtExpiry = payload.exp * 1000;
-      }catch(e){ _jwtExpiry = Date.now() + 8*3600*1000; }
-      // Haal api-key op via user profile (user_id komt uit login response)
-      var userId = data.user_id || '';
-      var meUrl = '/api/v3/me?username=' + encodeURIComponent(user) + (userId ? '&user_id=' + encodeURIComponent(userId) : '');
-      fetch(meUrl, {
-        headers: {'Authorization': 'Bearer ' + _jwtToken}
-      }).then(function(r){ return r.json(); }).then(function(profile){
-        if(profile && profile.user_api_key){
-          _cachedKey = profile.user_api_key;
-        } else {
-          console.warn('user_api_key niet gevonden in profiel');
-        }
-        modal.style.display = 'none';
-        if(onDone) onDone();
-      }).catch(function(){
-        modal.style.display = 'none';
-        if(onDone) onDone();
-      });
-    }).catch(function(err){
-      document.getElementById('lm-save').disabled = false;
-      document.getElementById('lm-err').textContent = 'Fout: ' + err.message;
-    });
+  if(typeof url==='string'&&url.startsWith('/api/')){
+    var k=_getKey();
+    if(k)opts=Object.assign({},opts,{headers:Object.assign({},opts.headers||{},{'x-alertops-key':k})});
   }
-
-  document.getElementById('lm-save').onclick = doLogin;
-  document.getElementById('lm-pass').onkeydown = function(e){ if(e.key==='Enter') doLogin(); };
+  return _realFetch(url,opts);
+};
+function showKeyModal(onSaved){
+  var modal=document.getElementById('key-modal');
+  modal.style.display='flex';
+  function doSave(){
+    var val=document.getElementById('key-input').value.trim();
+    if(!val){document.getElementById('key-err').textContent='Please enter a key.';return;}
+    document.getElementById('key-err').textContent='';
+    _setCookie('ao_key',_encode(val),2592000);
+    _cachedKey=val;
+    modal.style.display='none';
+    if(onSaved)onSaved();else toast('API key updated');
+  }
+  document.getElementById('key-save').onclick=doSave;
+  document.getElementById('key-input').onkeydown=function(e){if(e.key==='Enter')doSave();};
 }
-
-function ensureJwt(){
+function initAuth(){
   return new Promise(function(resolve){
-    if(_isJwtValid()){ resolve(); return; }
-    showLoginModal(resolve);
+    if(_getCookie('ao_key')){resolve();return;}
+    showKeyModal(resolve);
   });
 }
 
 /* ── Dynamic state ── */
 var PEOPLE_BASE=[], SCHEDULE={}, DEFAULT_SCHEDULE={}, WEEKS=[], FTS_BANDS=[];
-var OOO_MAP={}, USER_ID_MAP={};
-var AM_PM_SCHEDULES={}, MEMBER_MAP={};
-var HOLIDAYS={};
 var MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 /* ── Person colors ── */
@@ -399,57 +284,6 @@ function getRotationPerson(band,day){
   return{primary:band.users[idx],next:band.users[(idx+1)%band.users.length]};
 }
 
-function fmtTs(ts){if(!ts)return'?';var d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
-function getBandTs(day,hour){var d=new Date(day.getTime());if(hour>=24){d.setDate(d.getDate()+1);hour=hour%24;}d.setHours(hour,0,0,0);return d.getTime();}
-function calcOverlapRatio(entry,bSts,bEts){var dur=bEts-bSts;if(!dur||!entry.start_ts)return 0;return Math.max(0,Math.min(entry.end_ts,bEts)-Math.max(entry.start_ts,bSts))/dur;}
-function getOOOWeeklyStats(name,weekKey,slot){
-  var hours=SLOT_HOURS[slot]||[0,24];
-  var mon=fromKey(weekKey);
-  var totalMs=(hours[1]-hours[0])*3600000*5;
-  var coveredMs=0,cover=null;
-  for(var d=0;d<5;d++){
-    var day=addDays(mon,d);
-    var e=getOOOEntryForTime(name,day,hours[0],hours[1]);
-    if(!e)continue;
-    coveredMs+=Math.max(0,Math.min(e.end_ts,getBandTs(day,hours[1]))-Math.max(e.start_ts,getBandTs(day,hours[0])));
-    if(!cover)cover=e.cover;
-  }
-  var ratio=totalMs>0?coveredMs/totalMs:0;
-  return{ratio:ratio,cover:cover,isFull:ratio>=0.999,isMaj:ratio>0.5};
-}
-function getOOOEntryForTime(name,day,startHour,endHour){
-  var entries=OOO_MAP[name];
-  if(!entries||!entries.length)return null;
-  var bandStart=new Date(day);bandStart.setHours(startHour,0,0,0);
-  var bandEnd=new Date(day);
-  if(endHour>=24||endHour<=startHour)bandEnd.setDate(bandEnd.getDate()+1);
-  bandEnd.setHours(endHour%24,0,0,0);
-  var bSts=bandStart.getTime(),bEts=bandEnd.getTime();
-  return entries.find(function(e){return e.start_ts<bEts&&e.end_ts>bSts;})||null;
-}
-function getOOOCoverForTime(name,day,startHour,endHour){
-  var e=getOOOEntryForTime(name,day,startHour,endHour);return e?e.cover:null;
-}
-var ROW_HOURS={'eve-start':[0,1],'night':[1,8],'day':[8,18],'eve-end':[18,25]};
-var SLOT_HOURS={'am':[8,13],'pm':[13,18]};
-
-function isOOO(name,weekKey,slot){
-  var entries=OOO_MAP[name];
-  if(!entries||!entries.length)return false;
-  var mon=fromKey(weekKey);
-  var hours=SLOT_HOURS[slot]||[0,24];
-  for(var d=0;d<5;d++){if(getOOOCoverForTime(name,addDays(mon,d),hours[0],hours[1]))return true;}
-  return false;
-}
-function getOOOCover(name,weekKey,slot){
-  var entries=OOO_MAP[name];
-  if(!entries||!entries.length)return null;
-  var mon=fromKey(weekKey);
-  var hours=SLOT_HOURS[slot]||[0,24];
-  for(var d=0;d<5;d++){var c=getOOOCoverForTime(name,addDays(mon,d),hours[0],hours[1]);if(c)return c;}
-  return null;
-}
-
 /* ── FTS rendering ── */
 var FTS_ROW_ORDER=[
   {type:"eve-start",labels:["EVE2","EVE1"],rowLabel:"EVE 00:01-01:00",exclusive:true,use_prev_day:true},
@@ -482,24 +316,11 @@ function makeFtsBand(rowDef,weekMonday){
         var b=getFtsByLabel(rowDef.labels[li]);
         if(!b||b.days.indexOf(checkD)===-1)continue;
         var rot=getRotationPerson(b,calcDay);
-        var hours=ROW_HOURS[rowDef.type]||[0,24];
-        var oooEntry=getOOOEntryForTime(rot.primary,actualDay,hours[0],hours[1]);
-        var ooCover=oooEntry?oooEntry.cover:null;
         var chip=document.createElement("div");
         chip.className="fts-chip";
-        if(ooCover&&oooEntry){
-          var bSts=getBandTs(actualDay,hours[0]),bEts=getBandTs(actualDay,hours[1]);
-          var ratio=calcOverlapRatio(oooEntry,bSts,bEts);
-          var isFull=ratio>=0.999,isMaj=ratio>0.5;
-          chip.style.background=isMaj?personColor(ooCover):personColor(rot.primary);
-          chip.innerHTML=b.label+': '+(isFull?'<s>'+rot.primary+'</s>':rot.primary)+' '+ooCover;
-          chip.dataset.oooFrom=rot.primary;chip.dataset.oooTo=ooCover;
-          chip.dataset.oooStart=fmtTs(oooEntry.start_ts);chip.dataset.oooEnd=fmtTs(oooEntry.end_ts);
-          chip.dataset.oooRatio=Math.round(ratio*100);
-        }else{
-          chip.style.background=personColor(rot.primary);
-          chip.textContent=b.label+': '+rot.primary;
-        }
+        chip.style.background=personColor(rot.primary);
+        chip.textContent=b.label+": "+rot.primary;
+        chip.title=b.label+" ("+b.time+") — next: "+rot.next;
         cell.appendChild(chip);break;
       }
     }else{
@@ -507,24 +328,11 @@ function makeFtsBand(rowDef,weekMonday){
         var b=getFtsByLabel(label);
         if(!b||b.days.indexOf(checkD)===-1)return;
         var rot=getRotationPerson(b,calcDay);
-        var hours=ROW_HOURS[rowDef.type]||[0,24];
-        var oooEntry=getOOOEntryForTime(rot.primary,actualDay,hours[0],hours[1]);
-        var ooCover=oooEntry?oooEntry.cover:null;
         var chip=document.createElement("div");
         chip.className="fts-chip";
-        if(ooCover&&oooEntry){
-          var bSts=getBandTs(actualDay,hours[0]),bEts=getBandTs(actualDay,hours[1]);
-          var ratio=calcOverlapRatio(oooEntry,bSts,bEts);
-          var isFull=ratio>=0.999,isMaj=ratio>0.5;
-          chip.style.background=isMaj?personColor(ooCover):personColor(rot.primary);
-          chip.innerHTML=b.label+': '+(isFull?'<s>'+rot.primary+'</s>':rot.primary)+' '+ooCover;
-          chip.dataset.oooFrom=rot.primary;chip.dataset.oooTo=ooCover;
-          chip.dataset.oooStart=fmtTs(oooEntry.start_ts);chip.dataset.oooEnd=fmtTs(oooEntry.end_ts);
-          chip.dataset.oooRatio=Math.round(ratio*100);
-        }else{
-          chip.style.background=personColor(rot.primary);
-          chip.textContent=b.label+': '+rot.primary;
-        }
+        chip.style.background=personColor(rot.primary);
+        chip.textContent=b.label+": "+rot.primary;
+        chip.title=b.label+" ("+b.time+") — next: "+rot.next;
         cell.appendChild(chip);
       });
     }
@@ -546,37 +354,6 @@ function buildFtsBands(slotsEl,weekMonday){
   slotsEl.appendChild(eveEnd);
 }
 
-/* ── Holidays ── */
-function loadHolidays(){
-  var years=[2026,2027],countries=['BE','BG'],fetches=[];
-  years.forEach(function(y){
-    countries.forEach(function(c){
-      fetches.push(
-        fetch('https://date.nager.at/api/v3/PublicHolidays/'+y+'/'+c)
-          .then(function(r){return r.json();})
-          .then(function(data){
-            data.forEach(function(h){
-              if(!h.types||h.types.indexOf('Public')===-1)return;
-              if(!HOLIDAYS[h.date])HOLIDAYS[h.date]=[];
-              HOLIDAYS[h.date].push({country:c,name:h.name,localName:h.localName||h.name});
-            });
-          }).catch(function(){})
-      );
-    });
-  });
-  Promise.all(fetches).then(function(){
-    var count=Object.keys(HOLIDAYS).filter(function(d){
-      return WEEKS.some(function(w){return d>=w&&d<=toKey(addDays(fromKey(w),6));});
-    }).length;
-    var hstat=document.getElementById('hol-stat');
-    if(hstat)hstat.textContent='🇧🇪 BE + 🇧🇬 BG · '+count+' holiday days';
-    buildCal();
-  }).catch(function(){
-    var hstat=document.getElementById('hol-stat');
-    if(hstat)hstat.textContent='holidays unavailable';
-  });
-}
-
 /* ── API loading ── */
 function showLoading(msg){
   var el=document.getElementById('loading-overlay');
@@ -595,13 +372,7 @@ async function loadFromAPI(){
     if(mbrsRes.ok){
       var mbrsData=await mbrsRes.json();
       var mbrList=Array.isArray(mbrsData)?mbrsData:(mbrsData.members||mbrsData.data||[]);
-      PEOPLE_BASE=mbrList.map(function(m){return{name:shortName(m),user:m.member||m.user||''};});
-      USER_ID_MAP={};MEMBER_MAP={};
-      mbrList.forEach(function(m){
-        var sn=shortName(m);
-        USER_ID_MAP[sn]=String(m.member_id||m.user||'');
-        MEMBER_MAP[sn]={member_id:String(m.member_id||''),first_name:m.first_name||'',last_name:m.last_name||''};
-      });
+      PEOPLE_BASE=mbrList.map(function(m){return{name:shortName(m),user:m.user||''};});
     }
 
     showLoading('Loading schedules…');
@@ -618,7 +389,7 @@ async function loadFromAPI(){
       });
 
       // Build AM/PM schedule
-      SCHEDULE={};AM_PM_SCHEDULES={};
+      SCHEDULE={};
       amPmItems.forEach(function(item){
         var n=(item.schedule_name||'').toUpperCase();
         var slot=/\bAM\b/.test(n)?'am':'pm';
@@ -636,8 +407,6 @@ async function loadFromAPI(){
             if(!SCHEDULE[key])SCHEDULE[key]={};
             SCHEDULE[key][slot]=rot.primary;
           }
-          if(!AM_PM_SCHEDULES[key])AM_PM_SCHEDULES[key]={};
-          AM_PM_SCHEDULES[key][slot]=item;
           cur=addDays(cur,7);
         }
       });
@@ -646,55 +415,6 @@ async function loadFromAPI(){
 
       // Build FTS bands
       FTS_BANDS=ftsItems.map(buildBandFromItem);
-    }
-
-    // Fetch OOO via v3 group endpoint (één call voor hele groep)
-    showLoading('Loading out-of-office…');
-    OOO_MAP={};
-    await ensureJwt();
-    try{
-      // Bouw lookup: volledige naam → verkorte naam (via MEMBER_MAP)
-      var fullToShort={};
-      PEOPLE_BASE.forEach(function(p){
-        var m=MEMBER_MAP[p.name];
-        if(m){
-          var full=(m.first_name||'')+' '+(m.last_name||'');
-          fullToShort[full.trim()]=p.name;
-        }
-      });
-
-      // Bepaal date range: vroegste week t/m laatste week + 7 dagen
-      var firstWeek=WEEKS[0], lastWeek=WEEKS[WEEKS.length-1];
-      var oooStart=firstWeek, oooEnd=toKey(addDays(fromKey(lastWeek),6));
-      var oooRes=await fetch('/api/v3/ooo?startDate='+oooStart+'&endDate='+oooEnd+'&groupId=29931',{
-        headers:{'Authorization':'Bearer '+_jwtToken}
-      });
-      if(oooRes.ok){
-        var oooList=await oooRes.json();
-        if(Array.isArray(oooList)){
-          oooList.forEach(function(e){
-            var fullName=e.outOfOfficeUser;
-            if(!fullName)return;
-            // Zet volledige naam om naar verkorte naam
-            var shortName=fullToShort[fullName]||fullName;
-            var fullCover=e.coveringUser||null;
-            var shortCover=fullCover?(fullToShort[fullCover]||fullCover):null;
-            if(!OOO_MAP[shortName])OOO_MAP[shortName]=[];
-            OOO_MAP[shortName].push({
-              start:e.oofStartDate?e.oofStartDate.slice(0,10):'',
-              end:e.oofEndDate?e.oofEndDate.slice(0,10):'',
-              start_ts:e.oofStartDate?new Date(e.oofStartDate).getTime():0,
-              end_ts:e.oofEndDate?new Date(e.oofEndDate).getTime():0,
-              cover:shortCover,
-              id:e.outOfOfficeId
-            });
-          });
-        }
-      }else{
-        console.warn('v3 OOO fetch failed:', oooRes.status);
-      }
-    }catch(e){
-      console.warn('v3 OOO error:', e.message);
     }
 
     var cfgRes=await fetch('/api/config');
@@ -753,71 +473,22 @@ function buildCal(){
       band.dataset.key=k;band.dataset.slot=slot;
       var who=SCHEDULE[k]?SCHEDULE[k][slot]:null;
       if(who){
-        var stats=getOOOWeeklyStats(who,k,slot);
-        var ooo=stats.ratio>0;
-        var cover=stats.cover;
         var pill=document.createElement("div");
-        pill.className="pill"+(stats.isFull?" ooo":"");
-        var bg=stats.isMaj&&cover?personColor(cover):personColor(who);
+        pill.className="pill";
+        var bg=personColor(who);
         pill.style.background=bg;pill.style.borderColor=bg;pill.style.color="#212529";pill.style.fontWeight="600";
         pill.dataset.name=who;pill.dataset.key=k;pill.dataset.slot=slot;
-        var nameHtml=stats.isFull?'<s>'+who+'</s>':who;
-        pill.innerHTML='<span>'+slot.toUpperCase()+': '+nameHtml+'</span><span class="x" data-clear="1">&times;</span>';
+        pill.innerHTML='<span>'+slot.toUpperCase()+': '+who+'</span><span class="x" data-clear="1">&times;</span>';
         band.appendChild(pill);
-        if(ooo&&cover){
-          var ce=document.createElement("span");
-          ce.className="ooo-cover";
-          ce.textContent='↳ '+cover+(stats.isFull?'':' ('+Math.round(stats.ratio*100)+'%)');
-          band.appendChild(ce);
-        }
       }else{
         var e=document.createElement("span");
         e.className="empty";e.textContent="unassigned";
         band.appendChild(e);
       }
-      for(var wi=0;wi<2;wi++){
-        var wc=document.createElement("div");
-        var wdHols=HOLIDAYS[toKey(addDays(mon,5+wi))]||[];
-        wc.style.cssText=(wdHols.length?"background:var(--hol-cell)":"background:var(--surface2)")+";border-left:1px solid var(--border);";
-        band.appendChild(wc);
-      }
+      for(var wi=0;wi<2;wi++){var wc=document.createElement("div");wc.style.cssText="background:var(--surface2);border-left:1px solid var(--border);";band.appendChild(wc);}
       slots.appendChild(band);
     });
     buildFtsBands(slots,mon);
-
-    // Date + holiday row pinned above all bands
-    var holRow=document.createElement("div");
-    holRow.className="hol-row";
-    for(var hd=0;hd<7;hd++){
-      var hDate=addDays(mon,hd);
-      var hKey=toKey(hDate);
-      var hols=HOLIDAYS[hKey]||[];
-      var hCell=document.createElement("div");
-      hCell.className="hol-cell";
-      if(hols.length)hCell.style.background="var(--hol-cell)";
-      else if(hd>=5)hCell.style.background="var(--surface2)";
-      var dn=document.createElement("span");
-      dn.className="hol-date";
-      dn.textContent=hDate.getDate();
-      hCell.appendChild(dn);
-      hols.forEach(function(h){
-        var badge=document.createElement("span");
-        badge.className="hol-badge hol-"+h.country.toLowerCase();
-        badge.textContent=h.country==='BE'?'BE 🇧🇪':h.country==='BG'?'BG 🇧🇬':h.country;
-        badge.title=h.country+": "+h.name+(h.localName!==h.name?" ("+h.localName+")":"");
-        hCell.appendChild(badge);
-      });
-      holRow.appendChild(hCell);
-      if(hols.length){
-        var colBg=document.createElement("div");
-        colBg.className="hol-col-bg";
-        colBg.style.left="calc(92px + "+hd+" * (100% - 92px) / 7)";
-        colBg.style.width="calc((100% - 92px) / 7)";
-        row.appendChild(colBg);
-      }
-    }
-    slots.insertBefore(holRow,slots.firstChild);
-
     row.appendChild(slots);
     sc.appendChild(row);
   });
@@ -924,53 +595,26 @@ document.addEventListener("mouseout",function(e){if(e.target.closest(".person"))
 async function pushSchedule(){
   var btn=document.getElementById('btn-push');
   btn.disabled=true;
-
-  // Find changed AM/PM slots only (never touch NIGHT/EVE/DAY)
-  var changes=[];
+  showLoading('Pushing to AlertsOps…');
+  var shifts=[];
   WEEKS.forEach(function(k){
+    var s=SCHEDULE[k]||{};
     ['am','pm'].forEach(function(slot){
-      var cur=(SCHEDULE[k]&&SCHEDULE[k][slot])||null;
-      var orig=(DEFAULT_SCHEDULE[k]&&DEFAULT_SCHEDULE[k][slot])||null;
-      if(cur===orig)return;
-      var schedObj=AM_PM_SCHEDULES[k]&&AM_PM_SCHEDULES[k][slot];
-      if(!schedObj){console.warn('No schedule object for',k,slot);return;}
-      var member=cur?MEMBER_MAP[cur]:null;
-      changes.push({k:k,slot:slot,schedObj:schedObj,cur:cur,member:member});
+      if(s[slot])shifts.push({name:s[slot],start_date:k,type:slot.toUpperCase()});
     });
   });
-
-  if(!changes.length){toast('No changes to push — schedule matches AlertsOps.');btn.disabled=false;return;}
-
-  showLoading('Pushing '+changes.length+' change'+(changes.length!==1?'s':'')+' to AlertsOps…');
-  var ok=0,fail=0;
-
-  for(var i=0;i<changes.length;i++){
-    var ch=changes[i];
-    // Build PUT body: full schedule object with updated users
-    var body=JSON.parse(JSON.stringify(ch.schedObj));
-    if(ch.cur&&ch.member){
-      body.users=[{user:ch.member.member_id,first_name:ch.member.first_name,last_name:ch.member.last_name,role:'Primary'}];
-    }else{
-      body.users=[];
-    }
-    try{
-      var res=await fetch('/api/schedules/'+ch.schedObj.schedule_id,{
-        method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
-      });
-      if(res.ok||res.status===204)ok++;
-      else{fail++;console.warn('Push failed',ch.slot,ch.k,res.status,await res.text());}
-    }catch(e){fail++;console.warn('Push error',e);}
-    await new Promise(function(r){setTimeout(r,200);});
-  }
-
-  hideLoading();
-  if(fail===0){
-    // Update DEFAULT_SCHEDULE so reset goes back to new state
-    WEEKS.forEach(function(k){if(SCHEDULE[k])DEFAULT_SCHEDULE[k]=JSON.parse(JSON.stringify(SCHEDULE[k]));});
-    toast('✓ Pushed '+ok+' change'+(ok!==1?'s':'')+' to AlertsOps.');
-  }else{
-    toast('Pushed '+ok+' OK, '+fail+' failed — check console.');
-  }
+  if(!shifts.length){hideLoading();toast('Nothing to push.');btn.disabled=false;return;}
+  try{
+    var res=await fetch('/api/push-am-pm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shifts:shifts})});
+    var data=await res.json();
+    var results=data.results||[];
+    var ok=results.filter(function(r){return r.status>=200&&r.status<300;}).length;
+    var fail=results.length-ok;
+    hideLoading();
+    if(fail===0)toast('✓ Pushed '+ok+' shifts successfully');
+    else toast('Pushed '+ok+' OK, '+fail+' failed — check console');
+    console.log('Push results:',results);
+  }catch(e){hideLoading();toast('Push error: '+e.message);}
   btn.disabled=false;
 }
 
@@ -987,35 +631,13 @@ document.getElementById("btn-export").onclick=function(){
   toast("rotation.json downloaded");
 };
 document.getElementById("scroller").addEventListener("scroll",updateRange);
-
-/* ── OOO tooltip ── */
-(function(){
-  var tip=document.getElementById('ooo-tip');
-  document.addEventListener('mouseover',function(e){
-    var chip=e.target.closest('.fts-chip[data-ooo-from]');
-    if(!chip){tip.style.display='none';return;}
-    document.getElementById('ot-time').textContent=chip.dataset.oooStart+' – '+chip.dataset.oooEnd+' ('+chip.dataset.oooRatio+'% of shift)';
-    document.getElementById('ot-who').textContent=chip.dataset.oooFrom+' → '+chip.dataset.oooTo;
-    tip.style.display='block';
-    var r=chip.getBoundingClientRect();
-    var tipH=tip.offsetHeight||80;
-    var top=r.top>tipH+12?r.top-tipH-8:r.bottom+8;
-    tip.style.left=Math.min(r.left,window.innerWidth-250)+'px';
-    tip.style.top=top+'px';
-  });
-  document.addEventListener('mouseout',function(e){
-    if(!e.target.closest('.fts-chip[data-ooo-from]'))tip.style.display='none';
-  });
-})();
+document.getElementById("btn-key").onclick=function(){_cachedKey=null;_clearCookie('ao_key');document.getElementById('key-input').value='';document.getElementById('key-err').textContent='';showKeyModal(null);};
 
 /* ── Boot ── */
 initAuth().then(function(){
-  return ensureJwt();
-}).then(function(){
   return loadFromAPI();
 }).then(function(){
   render();
-  loadHolidays();
   var t=document.querySelector(".week-row.today-week");
   if(t)t.scrollIntoView({block:"center"});
 });

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AlertOps v3 OOO Test</title>
+  <style>
+    body { font-family: monospace; max-width: 900px; margin: 40px auto; padding: 0 20px; background: #1a1a2e; color: #eee; }
+    h1 { color: #a0c4ff; }
+    label { display: block; margin-top: 12px; color: #aaa; font-size: 13px; }
+    input { width: 100%; padding: 8px; margin-top: 4px; background: #16213e; color: #eee; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; }
+    input[type=password] { letter-spacing: 2px; }
+    button { margin-top: 16px; padding: 10px 24px; background: #4361ee; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #3a0ca3; }
+    #status { margin-top: 16px; padding: 10px; border-radius: 4px; font-size: 13px; }
+    .ok  { background: #1b4332; color: #95d5b2; }
+    .err { background: #4a1010; color: #ff6b6b; }
+    .info{ background: #1a1a3e; color: #a0c4ff; }
+    pre { background: #0f3460; padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 12px; max-height: 400px; overflow-y: auto; }
+    .section { margin-top: 32px; border-top: 1px solid #333; padding-top: 20px; }
+    .token-box { word-break: break-all; color: #90e0ef; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <h1>🔬 AlertOps v3 OOO — Test</h1>
+
+  <label>Account</label>
+  <input id="account" value="acn-cloudfirst">
+
+  <label>Username</label>
+  <input id="username" type="text" value="jeroen.van.daele@accenture.com">
+
+  <label>Password</label>
+  <input id="password" type="password">
+
+  <label>Group ID</label>
+  <input id="groupId" value="29931">
+
+  <label>Start Date</label>
+  <input id="startDate" type="date">
+
+  <label>End Date</label>
+  <input id="endDate" type="date">
+
+  <button onclick="runTest()">▶ Run Test</button>
+
+  <div id="status"></div>
+
+  <div id="results" style="display:none">
+    <div class="section">
+      <b>Step 1 — Login (via proxy → POST /api/v2/auth/login)</b>
+      <div id="loginResult"></div>
+    </div>
+    <div class="section">
+      <b>Step 2 — v3 OOO (via proxy → GET /api/v3/users/out_of_office)</b>
+      <div id="oooResult"></div>
+    </div>
+  </div>
+
+  <script>
+    const today = new Date();
+    const day = today.getDay();
+    const mon = new Date(today);
+    mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    const fmt = d => d.toISOString().slice(0,10);
+    document.getElementById('startDate').value = fmt(mon);
+    document.getElementById('endDate').value   = fmt(sun);
+
+    function setStatus(msg, cls) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = cls;
+    }
+
+    async function runTest() {
+      const account   = document.getElementById('account').value.trim();
+      const username  = document.getElementById('username').value.trim();
+      const password  = document.getElementById('password').value;
+      const groupId   = document.getElementById('groupId').value.trim();
+      const startDate = document.getElementById('startDate').value;
+      const endDate   = document.getElementById('endDate').value;
+
+      if (!username || !password) { setStatus('Fill in username and password.', 'err'); return; }
+
+      document.getElementById('results').style.display = 'none';
+      setStatus('⏳ Logging in via proxy…', 'info');
+
+      let token, refreshToken;
+      try {
+        const res = await fetch('/api/v3/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account, user_name: username, password })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.token) throw new Error(JSON.stringify(data));
+
+        token = data.token;
+        refreshToken = data.refresh_token;
+
+        document.getElementById('loginResult').innerHTML =
+          `<div class="ok" style="padding:8px;border-radius:4px;margin-top:8px">✅ Login OK — token expires in ~8h</div>
+           <p>Token: <span class="token-box">${token.slice(0,80)}…</span></p>
+           <p>Refresh token: <span class="token-box">${(refreshToken||'').slice(0,40)}…</span></p>`;
+
+        setStatus('⏳ Fetching OOO data via proxy…', 'info');
+      } catch(e) {
+        document.getElementById('loginResult').innerHTML =
+          `<div class="err" style="padding:8px;border-radius:4px;margin-top:8px">❌ Login failed: ${e.message}</div>`;
+        setStatus('Login failed — see Step 1.', 'err');
+        document.getElementById('results').style.display = '';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/v3/ooo?startDate=${startDate}&endDate=${endDate}&groupId=${groupId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(JSON.stringify(data));
+
+        const count = Array.isArray(data) ? data.length : (data.items?.length ?? '?');
+        document.getElementById('oooResult').innerHTML =
+          `<div class="ok" style="padding:8px;border-radius:4px;margin-top:8px">✅ ${count} OOO record(s) returned voor group ${groupId}</div>
+           <pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+        setStatus(`✅ Done — ${count} OOO record(s) found.`, 'ok');
+      } catch(e) {
+        document.getElementById('oooResult').innerHTML =
+          `<div class="err" style="padding:8px;border-radius:4px;margin-top:8px">❌ OOO call failed: ${e.message}</div>`;
+        setStatus('OOO call failed — see Step 2.', 'err');
+      }
+
+      document.getElementById('results').style.display = '';
+    }
+  </script>
+</body>
+</html>
+<!-- refresh test: open browser console and run:
+fetch('/api/v3/login', {method:'POST', headers:{'Content-Type':'application/json'},
+  body: JSON.stringify({account:'acn-cloudfirst', user_name:'jeroen.van.daele@accenture.com', password:'...'})})
+  .then(r=>r.json()).then(d => {
+    console.log('refresh_token:', d.refresh_token);
+    return fetch('https://app.alertops.com/api/v2/auth/refresh', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({refresh_token: d.refresh_token})});
+  }).then(r=>r.json()).then(console.log).catch(console.error);
+-->
