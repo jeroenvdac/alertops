@@ -647,9 +647,27 @@ async function loadFromAPI(){
         var slot=/\bAM\b/.test(n)?'am':'pm';
         var startStr=item.start_date&&item.start_date.date;
         if(!startStr)return;
+        var endStr=item.end_date&&item.end_date.date;
+        // Dag-schedule: start en eind zijn dezelfde dag (start_weekday === end_weekday en 1 dag)
+        var isSingleDay=startStr===endStr||(item.start_weekday&&item.end_weekday&&item.start_weekday===item.end_weekday&&startStr!==toKey(getMon(new Date(startStr))));
+        if(isSingleDay&&startStr){
+          // Laad als dag-assignment
+          var weekKey=toKey(getMon(new Date(startStr)));
+          var person=item.users&&item.users.length?shortName(item.users[0]):'';
+          if(person){
+            if(!SCHEDULE[weekKey])SCHEDULE[weekKey]={};
+            if(!SCHEDULE[weekKey][slot+'_days'])SCHEDULE[weekKey][slot+'_days']={};
+            SCHEDULE[weekKey][slot+'_days'][startStr]=person;
+          }
+          if(!AM_PM_SCHEDULES[weekKey])AM_PM_SCHEDULES[weekKey]={};
+          AM_PM_SCHEDULES[weekKey][slot+'_day_'+startStr]=item;
+          // Zorg dat de week ook in WEEKS staat
+          if(!SCHEDULE[weekKey])SCHEDULE[weekKey]={};
+          return;
+        }
+        // Week-schedule: normaal verwerken
         var band=buildBandFromItem(item);
         var start=getMon(new Date(startStr));
-        var endStr=item.end_date&&item.end_date.date;
         var end=endStr?new Date(endStr):addDays(start,7*24);
         var cur=new Date(start);
         while(cur<=end){
