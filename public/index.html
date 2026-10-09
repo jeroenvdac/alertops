@@ -649,11 +649,10 @@ async function loadFromAPI(){
         if(!startStr)return;
         var endStr=item.end_date&&item.end_date.date;
         // Dag-schedule: start en eind zijn dezelfde dag (start_weekday === end_weekday en 1 dag)
-        // Dag-schedule detectie: start en end zijn op dezelfde kalenderdag
-        // OF: naam bevat de startdatum en start_weekday===end_weekday en startStr===endStr
-        // Meest betrouwbaar: vergelijk start_date.date met end_date.date direct
-        var rawEndStr=item.end_date&&item.end_date.date?item.end_date.date:'';
-        var isSingleDay=startStr===rawEndStr&&item.start_weekday===item.end_weekday;
+        // Dag-schedule: exact 1 weekdag actief in schedule_weekdays
+        var sw=item.schedule_weekdays||{};
+        var activeDays=Object.keys(sw).filter(function(d){return sw[d];});
+        var isSingleDay=activeDays.length===1;
         if(isSingleDay&&startStr){
           // Laad als dag-assignment
           var weekKey=toKey(getMon(new Date(startStr)));
