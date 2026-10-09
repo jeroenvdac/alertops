@@ -76,6 +76,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .pill.ghosted{opacity:.3}
 .pill.hl{box-shadow:0 0 0 2px currentColor}
 .pill.ooo{opacity:.5;filter:grayscale(.4)}
+.day-band{display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
+.day-band:last-child{border-bottom:none}
+.day-band-top{display:grid;grid-template-columns:repeat(5,1fr) repeat(2,1fr);border-bottom:1px dashed var(--border2)}
+.day-band-bot{display:grid;grid-template-columns:repeat(5,1fr) repeat(2,1fr);min-height:26px}
+.day-cell{border-right:1px solid var(--border);min-height:32px;display:flex;align-items:center;padding:2px 3px;position:relative}
+.day-cell:last-child{border-right:none}
+.day-cell.weekend{background:var(--surface2)}
+.day-cell.drop{background:rgba(52,152,219,.14);box-shadow:inset 0 0 0 2px var(--am)}
+.day-cell.drop.pm{background:rgba(230,126,34,.14);box-shadow:inset 0 0 0 2px var(--pm)}
+.day-pill{display:flex;align-items:center;gap:4px;padding:3px 5px 3px 7px;border-radius:5px;font-size:11px;font-weight:600;cursor:grab;border:1px solid transparent;touch-action:none;width:100%}
+.day-pill span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.day-pill.am{background:var(--am-bg);color:var(--am-text);border-color:var(--am)}
+.day-pill.pm{background:var(--pm-bg);color:var(--pm-text);border-color:var(--pm)}
+.day-pill .x{width:14px;height:14px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1;opacity:.45;cursor:pointer;flex-shrink:0}
+.day-pill .x:hover{opacity:1;background:rgba(0,0,0,.1)}
+.day-pill.ghosted{opacity:.3}
+.week-zone{grid-column:1/6;display:flex;align-items:center;padding:2px 8px;font-size:10px;border-right:1px solid var(--border);cursor:grab}
+.week-zone.avail.am{color:var(--am-text);background:var(--am-bg)}
+.week-zone.avail.pm{color:var(--pm-text);background:var(--pm-bg)}
+.week-zone.blocked{color:var(--muted);font-style:italic;background:var(--surface2);cursor:not-allowed;opacity:.6}
+.week-zone.drop{box-shadow:inset 0 0 0 2px var(--am)}
+.week-zone.drop.pm{box-shadow:inset 0 0 0 2px var(--pm)}
+.drop-hint{font-size:9px;color:var(--border2);pointer-events:none}
 .ooo-cover{font-size:10px;color:var(--ok);padding:1px 6px 3px;display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #ooo-tip{position:fixed;z-index:9999;background:#1e2637;color:#e2e8f0;border:1px solid #f87171;border-radius:7px;padding:9px 13px;font-size:11px;line-height:1.7;pointer-events:none;display:none;max-width:240px;box-shadow:0 6px 20px rgba(0,0,0,.4)}
 .ot-title{font-weight:700;color:#f87171;margin-bottom:3px;letter-spacing:.03em}
@@ -760,13 +783,13 @@ function buildCal(){
     var slots=document.createElement("div");
     slots.className="wk-slots";
     ["am","pm"].forEach(function(slot){
-      var band=document.createElement("div");
-      band.className="band";
-      band.dataset.key=k;band.dataset.slot=slot;
       var who=SCHEDULE[k]?SCHEDULE[k][slot]:null;
       if(who){
+        // ── week-mode: persoon toegewezen voor hele week ──
+        var band=document.createElement("div");
+        band.className="band";
+        band.dataset.key=k;band.dataset.slot=slot;
         var stats=getOOOWeeklyStats(who,k,slot);
-        var ooo=stats.ratio>0;
         var cover=stats.cover;
         var pill=document.createElement("div");
         pill.className="pill"+(stats.isFull?" ooo":"");
@@ -776,24 +799,72 @@ function buildCal(){
         var nameHtml=stats.isFull?'<s>'+who+'</s>':who;
         pill.innerHTML='<span>'+slot.toUpperCase()+': '+nameHtml+'</span><span class="x" data-clear="1">&times;</span>';
         band.appendChild(pill);
-        if(ooo&&cover){
+        if(stats.ratio>0&&cover){
           var ce=document.createElement("span");
           ce.className="ooo-cover";
           ce.textContent='↳ '+cover+(stats.isFull?'':' ('+Math.round(stats.ratio*100)+'%)');
           band.appendChild(ce);
         }
+        for(var wi=0;wi<2;wi++){
+          var wc=document.createElement("div");
+          var wdHols=HOLIDAYS[toKey(addDays(mon,5+wi))]||[];
+          wc.style.cssText=(wdHols.length?"background:var(--hol-cell)":"background:var(--surface2)")+";border-left:1px solid var(--border);";
+          band.appendChild(wc);
+        }
+        slots.appendChild(band);
       }else{
-        var e=document.createElement("span");
-        e.className="empty";e.textContent="unassigned";
-        band.appendChild(e);
+        // ── dag-mode: leeg → split in dag-rij + week-zone ──
+        var hasDays=hasDayAssignments(k,slot);
+        var dayBand=document.createElement("div");
+        dayBand.className="day-band";
+        dayBand.dataset.key=k;dayBand.dataset.slot=slot;
+        // bovenste rij: 5 dag-cellen + 2 weekend
+        var topRow=document.createElement("div");
+        topRow.className="day-band-top";
+        for(var di=0;di<7;di++){
+          var dayDate=addDays(mon,di);
+          var dayKey=toKey(dayDate);
+          var dc=document.createElement("div");
+          dc.className="day-cell"+(di>=5?" weekend":"");
+          if(di>=5){topRow.appendChild(dc);continue;}
+          var holDc=HOLIDAYS[dayKey]||[];
+          if(holDc.length)dc.style.background="var(--hol-cell)";
+          dc.dataset.key=k;dc.dataset.slot=slot;dc.dataset.day=dayKey;
+          var dayWho=getDaySlot(k,slot,dayKey);
+          if(dayWho){
+            var dp=document.createElement("div");
+            dp.className="day-pill "+slot;
+            var dpBg=personColor(dayWho);
+            dp.style.background=dpBg;dp.style.borderColor=dpBg;dp.style.color="#212529";
+            dp.dataset.name=dayWho;dp.dataset.key=k;dp.dataset.slot=slot;dp.dataset.day=dayKey;
+            dp.innerHTML='<span>'+dayWho+'</span><span class="x" data-clear-day="1">&times;</span>';
+            dc.appendChild(dp);
+          }else{
+            var dh=document.createElement("span");
+            dh.className="drop-hint";dh.textContent="drop";
+            dc.appendChild(dh);
+          }
+          topRow.appendChild(dc);
+        }
+        dayBand.appendChild(topRow);
+        // onderste rij: week-zone
+        var botRow=document.createElement("div");
+        botRow.className="day-band-bot";
+        var wz=document.createElement("div");
+        wz.className="week-zone "+(hasDays?"blocked":"avail "+slot);
+        wz.dataset.key=k;wz.dataset.slot=slot;
+        wz.textContent=hasDays?"clear day assignments first":"drop here for full week";
+        if(!hasDays)wz.dataset.weekZone="1";
+        botRow.appendChild(wz);
+        for(var wi2=0;wi2<2;wi2++){
+          var wc2=document.createElement("div");
+          var wdHols2=HOLIDAYS[toKey(addDays(mon,5+wi2))]||[];
+          wc2.style.cssText=(wdHols2.length?"background:var(--hol-cell)":"background:var(--surface2)")+";border-left:1px solid var(--border);";
+          botRow.appendChild(wc2);
+        }
+        dayBand.appendChild(botRow);
+        slots.appendChild(dayBand);
       }
-      for(var wi=0;wi<2;wi++){
-        var wc=document.createElement("div");
-        var wdHols=HOLIDAYS[toKey(addDays(mon,5+wi))]||[];
-        wc.style.cssText=(wdHols.length?"background:var(--hol-cell)":"background:var(--surface2)")+";border-left:1px solid var(--border);";
-        band.appendChild(wc);
-      }
-      slots.appendChild(band);
     });
     buildFtsBands(slots,mon);
 
@@ -879,15 +950,26 @@ function render(){buildCal();buildPeople();}
 function setSlot(key,slot,name){if(!SCHEDULE[key])SCHEDULE[key]={};if(name)SCHEDULE[key][slot]=name;else delete SCHEDULE[key][slot];}
 function getSlot(key,slot){return SCHEDULE[key]?SCHEDULE[key][slot]:null;}
 function clearSlot(key,slot){var was=getSlot(key,slot);if(!was)return;setSlot(key,slot,null);render();toast(was+" removed from "+slot.toUpperCase()+" W"+isoWeek(fromKey(key)));}
+function hasDayAssignments(weekKey,slot){var days=SCHEDULE[weekKey]&&SCHEDULE[weekKey][slot+'_days'];if(!days)return false;return Object.keys(days).some(function(d){return days[d];});}
+function setDaySlot(weekKey,slot,dayKey,name){if(!SCHEDULE[weekKey])SCHEDULE[weekKey]={};if(!SCHEDULE[weekKey][slot+'_days'])SCHEDULE[weekKey][slot+'_days']={};if(name)SCHEDULE[weekKey][slot+'_days'][dayKey]=name;else delete SCHEDULE[weekKey][slot+'_days'][dayKey];}
+function getDaySlot(weekKey,slot,dayKey){var days=SCHEDULE[weekKey]&&SCHEDULE[weekKey][slot+'_days'];return days?days[dayKey]||null:null;}
+function clearDaySlot(weekKey,slot,dayKey){var was=getDaySlot(weekKey,slot,dayKey);if(!was)return;setDaySlot(weekKey,slot,dayKey,null);render();toast(was+' removed from '+slot.toUpperCase()+' '+dayKey);}
 
 /* ── Drag & drop ── */
 var drag=null;
 document.addEventListener("pointerdown",function(e){
+  // clear dag-pill
+  var xd=e.target.closest("[data-clear-day]");
+  if(xd){var dp=xd.closest(".day-pill");clearDaySlot(dp.dataset.key,dp.dataset.slot,dp.dataset.day);e.preventDefault();return;}
+  // clear week-pill
   var x=e.target.closest("[data-clear]");
   if(x){var pl=x.closest(".pill");clearSlot(pl.dataset.key,pl.dataset.slot);e.preventDefault();return;}
-  var src=e.target.closest(".pill, .person");
+  var src=e.target.closest(".pill, .day-pill, .person");
   if(!src||e.button!==0)return;
-  drag={name:src.dataset.name,from:src.classList.contains("pill")?{key:src.dataset.key,slot:src.dataset.slot}:null,el:src,startX:e.clientX,startY:e.clientY,active:false,over:null};
+  var fromInfo=null;
+  if(src.classList.contains("pill"))fromInfo={type:"week",key:src.dataset.key,slot:src.dataset.slot};
+  else if(src.classList.contains("day-pill"))fromInfo={type:"day",key:src.dataset.key,slot:src.dataset.slot,day:src.dataset.day};
+  drag={name:src.dataset.name,from:fromInfo,el:src,startX:e.clientX,startY:e.clientY,active:false,over:null};
   e.preventDefault();
 });
 document.addEventListener("pointermove",function(e){
@@ -903,14 +985,29 @@ document.addEventListener("pointermove",function(e){
     document.body.style.cursor="grabbing";
   }
   drag.ghost.style.left=e.clientX+"px";drag.ghost.style.top=e.clientY+"px";
-  document.querySelectorAll(".band.drop,.band.drop-bad").forEach(function(b){b.classList.remove("drop","drop-bad");});
+  document.querySelectorAll(".band.drop,.band.drop-bad,.day-cell.drop,.week-zone.drop").forEach(function(b){b.classList.remove("drop","drop-bad");});
   document.getElementById("people").classList.remove("trash");
   var under=document.elementFromPoint(e.clientX,e.clientY);
   var band=under?under.closest(".band"):null;
+  var dayCell=under?under.closest(".day-cell:not(.weekend)"):null;
+  var weekZone=under?under.closest(".week-zone.avail"):null;
   var panel=under?under.closest("#people"):null;
-  if(band){drag.over={type:"band",key:band.dataset.key,slot:band.dataset.slot};band.classList.add("drop");if(drag.ghost)drag.ghost.className="pill "+band.dataset.slot;}
-  else if(panel&&drag.from){drag.over={type:"trash"};panel.classList.add("trash");}
-  else{drag.over=null;}
+  if(band){
+    drag.over={type:"band",key:band.dataset.key,slot:band.dataset.slot};
+    band.classList.add("drop");
+    if(drag.ghost)drag.ghost.className="pill "+band.dataset.slot;
+  }else if(dayCell&&dayCell.dataset.day){
+    drag.over={type:"day-cell",key:dayCell.dataset.key,slot:dayCell.dataset.slot,day:dayCell.dataset.day};
+    dayCell.classList.add("drop");
+    if(dayCell.dataset.slot==="pm")dayCell.classList.add("pm");
+    if(drag.ghost)drag.ghost.className="pill "+(dayCell.dataset.slot||"am");
+  }else if(weekZone&&weekZone.dataset.weekZone){
+    drag.over={type:"week-zone",key:weekZone.dataset.key,slot:weekZone.dataset.slot};
+    weekZone.classList.add("drop");
+    if(drag.ghost)drag.ghost.className="pill "+(weekZone.dataset.slot||"am");
+  }else if(panel&&drag.from){
+    drag.over={type:"trash"};panel.classList.add("trash");
+  }else{drag.over=null;}
 });
 document.addEventListener("pointerup",function(){
   if(!drag)return;
@@ -918,15 +1015,46 @@ document.addEventListener("pointerup",function(){
   document.body.style.cursor="";
   if(d.ghost)d.ghost.remove();
   if(d.el)d.el.classList.remove("ghosted");
-  document.querySelectorAll(".band.drop,.band.drop-bad").forEach(function(b){b.classList.remove("drop","drop-bad");});
+  document.querySelectorAll(".band.drop,.band.drop-bad,.day-cell.drop,.week-zone.drop").forEach(function(b){b.classList.remove("drop","drop-bad","pm");});
   document.getElementById("people").classList.remove("trash");
   if(!d.active||!d.over)return;
-  if(d.over.type==="trash"){clearSlot(d.from.key,d.from.slot);return;}
-  var tk=d.over.key,ts=d.over.slot;
-  if(d.from&&d.from.key===tk&&d.from.slot===ts)return;
-  var occupant=getSlot(tk,ts);
-  if(d.from){setSlot(tk,ts,d.name);setSlot(d.from.key,d.from.slot,occupant||null);render();toast(occupant?d.name+" & "+occupant+" swapped":d.name+" moved to "+ts.toUpperCase()+" W"+isoWeek(fromKey(tk)));}
-  else{setSlot(tk,ts,d.name);render();toast(occupant?d.name+" replaces "+occupant:d.name+" assigned to "+ts.toUpperCase()+" W"+isoWeek(fromKey(tk)));}
+
+  if(d.over.type==="trash"){
+    if(d.from&&d.from.type==="day")clearDaySlot(d.from.key,d.from.slot,d.from.day);
+    else if(d.from)clearSlot(d.from.key,d.from.slot);
+    return;
+  }
+  if(d.over.type==="day-cell"){
+    var tk=d.over.key,ts=d.over.slot,td=d.over.day;
+    var prev=getDaySlot(tk,ts,td);
+    setDaySlot(tk,ts,td,d.name);
+    // als we verplaatsen vanuit een dag-cel, wis de bron
+    if(d.from&&d.from.type==="day"){
+      if(!(d.from.key===tk&&d.from.slot===ts&&d.from.day===td)){
+        setDaySlot(d.from.key,d.from.slot,d.from.day,prev||null);
+      }
+    }
+    render();
+    toast(d.name+" assigned to "+ts.toUpperCase()+" "+td);
+    return;
+  }
+  if(d.over.type==="week-zone"){
+    var tk=d.over.key,ts=d.over.slot;
+    setSlot(tk,ts,d.name);
+    if(d.from&&d.from.type==="day")setDaySlot(d.from.key,d.from.slot,d.from.day,null);
+    else if(d.from&&d.from.type==="week")setSlot(d.from.key,d.from.slot,null);
+    render();
+    toast(d.name+" assigned to "+ts.toUpperCase()+" W"+isoWeek(fromKey(tk))+" (full week)");
+    return;
+  }
+  if(d.over.type==="band"){
+    var tk=d.over.key,ts=d.over.slot;
+    if(d.from&&d.from.type==="week"&&d.from.key===tk&&d.from.slot===ts)return;
+    var occupant=getSlot(tk,ts);
+    if(d.from&&d.from.type==="week"){setSlot(tk,ts,d.name);setSlot(d.from.key,d.from.slot,occupant||null);render();toast(occupant?d.name+" & "+occupant+" swapped":d.name+" moved to "+ts.toUpperCase()+" W"+isoWeek(fromKey(tk)));}
+    else{setSlot(tk,ts,d.name);render();toast(occupant?d.name+" replaces "+occupant:d.name+" assigned to "+ts.toUpperCase()+" W"+isoWeek(fromKey(tk)));}
+    return;
+  }
 });
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&drag){if(drag.ghost)drag.ghost.remove();if(drag.el)drag.el.classList.remove("ghosted");document.querySelectorAll(".band.drop,.band.drop-bad").forEach(function(b){b.classList.remove("drop","drop-bad");});document.getElementById("people").classList.remove("trash");document.body.style.cursor="";drag=null;}});
 document.addEventListener("mouseover",function(e){var p=e.target.closest(".person");if(!p)return;document.querySelectorAll(".pill").forEach(function(pl){pl.classList.toggle("hl",pl.dataset.name===p.dataset.name);});});
@@ -937,17 +1065,33 @@ async function pushSchedule(){
   var btn=document.getElementById('btn-push');
   btn.disabled=true;
 
-  // Find changed AM/PM slots only (never touch NIGHT/EVE/DAY)
+  // Find changed AM/PM slots (week-level + day-level)
   var changes=[];
   WEEKS.forEach(function(k){
     ['am','pm'].forEach(function(slot){
+      // week-level changes
       var cur=(SCHEDULE[k]&&SCHEDULE[k][slot])||null;
       var orig=(DEFAULT_SCHEDULE[k]&&DEFAULT_SCHEDULE[k][slot])||null;
-      if(cur===orig)return;
-      var schedObj=AM_PM_SCHEDULES[k]&&AM_PM_SCHEDULES[k][slot];
-      var personObj=cur?PEOPLE_BASE.find(function(p){return p.name===cur;}):null;
-      var email=personObj?personObj.user:'';
-      changes.push({k:k,slot:slot,schedObj:schedObj,cur:cur,email:email,isNew:!schedObj});
+      if(cur!==orig){
+        var schedObj=AM_PM_SCHEDULES[k]&&AM_PM_SCHEDULES[k][slot];
+        var personObj=cur?PEOPLE_BASE.find(function(p){return p.name===cur;}):null;
+        var email=personObj?personObj.user:'';
+        changes.push({type:'week',k:k,slot:slot,schedObj:schedObj,cur:cur,email:email,isNew:!schedObj});
+      }
+      // day-level changes
+      var curDays=(SCHEDULE[k]&&SCHEDULE[k][slot+'_days'])||{};
+      var origDays=(DEFAULT_SCHEDULE[k]&&DEFAULT_SCHEDULE[k][slot+'_days'])||{};
+      var allDayKeys=Object.keys(Object.assign({},curDays,origDays));
+      allDayKeys.forEach(function(dayKey){
+        var curD=curDays[dayKey]||null;
+        var origD=origDays[dayKey]||null;
+        if(curD===origD)return;
+        var personObj=curD?PEOPLE_BASE.find(function(p){return p.name===curD;}):null;
+        var email=personObj?personObj.user:'';
+        // zoek bestaand dag-schedule object
+        var daySchedObj=AM_PM_SCHEDULES[k]&&AM_PM_SCHEDULES[k][slot+'_day_'+dayKey];
+        changes.push({type:'day',k:k,slot:slot,dayKey:dayKey,cur:curD,email:email,schedObj:daySchedObj,isNew:!daySchedObj});
+      });
     });
   });
 
@@ -960,57 +1104,100 @@ async function pushSchedule(){
     var ch=changes[i];
     try{
       var res;
-      if(ch.isNew){
-        // Schedule bestaat nog niet in AlertOps → POST aanmaken
-        if(!ch.cur||!ch.email){
-          console.warn('Skipping new slot (no person or email)',ch.slot,ch.k);
-          fail++;continue;
-        }
+      if(ch.type==='day'){
+        // dag-schedule
         var isAm=ch.slot==='am';
-        var endDay=toKey(addDays(fromKey(ch.k),4));
-        var body={
-          group:'29931',
-          schedule_name:(isAm?'AM':'PM')+' '+ch.k,
-          schedule_type:'Fixed',
-          continuous:false,
-          time_zone:'(UTC+01:00) Brussels, Copenhagen, Madrid, Paris',
-          color:isAm?'#3498DB':'#E67E22',
-          start_weekday:'Mon',end_weekday:'Fri',
-          start_date:{date:ch.k,hour:isAm?8:13,minute:0},
-          end_date:{date:endDay,hour:isAm?13:18,minute:0},
-          schedule_weekdays:{sun:false,mon:true,tue:true,wed:true,thu:true,fri:true,sat:false},
-          include_all_users_in_group:false,
-          users:[{user:ch.email,role:'Primary'}],
-          description:[],
-          enabled:true
-        };
-        res=await fetch('/api/schedules',{
-          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
-        });
-        if(res.ok||res.status===201){
-          ok++;
-          // Sla het nieuwe schedule op zodat volgende push een PUT doet
-          var created=await res.clone().json().catch(function(){return null;});
-          if(created&&created.schedule_id){
-            if(!AM_PM_SCHEDULES[ch.k])AM_PM_SCHEDULES[ch.k]={};
-            AM_PM_SCHEDULES[ch.k][ch.slot]=created;
+        var dow=new Date(ch.dayKey).getDay(); // 0=Sun,1=Mon...
+        var dowNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        var dowName=dowNames[dow];
+        if(ch.isNew&&ch.cur&&ch.email){
+          // POST nieuw dag-schedule
+          var body={
+            group:'29931',
+            schedule_name:(isAm?'AM':'PM')+' '+ch.dayKey,
+            schedule_type:'Fixed',
+            continuous:false,
+            time_zone:'(UTC+01:00) Brussels, Copenhagen, Madrid, Paris',
+            color:isAm?'#3498DB':'#E67E22',
+            start_weekday:dowName,end_weekday:dowName,
+            start_date:{date:ch.dayKey,hour:isAm?8:13,minute:0},
+            end_date:{date:ch.dayKey,hour:isAm?13:18,minute:0},
+            schedule_weekdays:{sun:dow===0,mon:dow===1,tue:dow===2,wed:dow===3,thu:dow===4,fri:dow===5,sat:dow===6},
+            include_all_users_in_group:false,
+            users:[{user:ch.email,role:'Primary'}],
+            description:[],
+            enabled:true
+          };
+          res=await fetch('/api/schedules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+          if(res.ok||res.status===201){
+            ok++;
+            var created=await res.clone().json().catch(function(){return null;});
+            if(created&&created.schedule_id){
+              if(!AM_PM_SCHEDULES[ch.k])AM_PM_SCHEDULES[ch.k]={};
+              AM_PM_SCHEDULES[ch.k][ch.slot+'_day_'+ch.dayKey]=created;
+            }
+          }else{fail++;console.warn('POST day failed',ch.slot,ch.dayKey,res.status,await res.text());}
+        }else if(!ch.isNew&&ch.schedObj){
+          if(ch.cur&&ch.email){
+            // PUT bestaand dag-schedule
+            var body=JSON.parse(JSON.stringify(ch.schedObj));
+            body.users=[{user:ch.email,role:'Primary'}];
+            res=await fetch('/api/schedules/'+ch.schedObj.schedule_id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+            if(res.ok||res.status===204)ok++;
+            else{fail++;console.warn('PUT day failed',ch.slot,ch.dayKey,res.status,await res.text());}
+          }else{
+            // DELETE dag-schedule (persoon verwijderd)
+            res=await fetch('/api/schedules/'+ch.schedObj.schedule_id,{method:'DELETE'});
+            if(res.ok||res.status===204){
+              ok++;
+              if(AM_PM_SCHEDULES[ch.k])delete AM_PM_SCHEDULES[ch.k][ch.slot+'_day_'+ch.dayKey];
+            }else{fail++;console.warn('DELETE day failed',ch.slot,ch.dayKey,res.status,await res.text());}
           }
-        }else{fail++;console.warn('POST failed',ch.slot,ch.k,res.status,await res.text());}
-      }else{
-        // Bestaand schedule → PUT met email als user field
-        var body=JSON.parse(JSON.stringify(ch.schedObj));
-        if(ch.cur&&ch.email){
-          body.users=[{user:ch.email,role:'Primary'}];
+        }else if(ch.isNew&&!ch.cur){
+          // was nooit in AlertOps, niks te doen
         }else{
-          body.users=[];
+          fail++;console.warn('Skipping day slot (no email or schedObj)',ch.slot,ch.dayKey);
         }
-        res=await fetch('/api/schedules/'+ch.schedObj.schedule_id,{
-          method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
-        });
-        if(res.ok||res.status===204)ok++;
-        else{fail++;console.warn('PUT failed',ch.slot,ch.k,res.status,await res.text());}
+      }else{
+        // week-schedule
+        if(ch.isNew){
+          if(!ch.cur||!ch.email){fail++;console.warn('Skipping new week slot',ch.slot,ch.k);continue;}
+          var isAm=ch.slot==='am';
+          var endDay=toKey(addDays(fromKey(ch.k),4));
+          var body={
+            group:'29931',
+            schedule_name:(isAm?'AM':'PM')+' '+ch.k,
+            schedule_type:'Fixed',
+            continuous:false,
+            time_zone:'(UTC+01:00) Brussels, Copenhagen, Madrid, Paris',
+            color:isAm?'#3498DB':'#E67E22',
+            start_weekday:'Mon',end_weekday:'Fri',
+            start_date:{date:ch.k,hour:isAm?8:13,minute:0},
+            end_date:{date:endDay,hour:isAm?13:18,minute:0},
+            schedule_weekdays:{sun:false,mon:true,tue:true,wed:true,thu:true,fri:true,sat:false},
+            include_all_users_in_group:false,
+            users:[{user:ch.email,role:'Primary'}],
+            description:[],
+            enabled:true
+          };
+          res=await fetch('/api/schedules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+          if(res.ok||res.status===201){
+            ok++;
+            var created=await res.clone().json().catch(function(){return null;});
+            if(created&&created.schedule_id){
+              if(!AM_PM_SCHEDULES[ch.k])AM_PM_SCHEDULES[ch.k]={};
+              AM_PM_SCHEDULES[ch.k][ch.slot]=created;
+            }
+          }else{fail++;console.warn('POST week failed',ch.slot,ch.k,res.status,await res.text());}
+        }else{
+          var body=JSON.parse(JSON.stringify(ch.schedObj));
+          body.users=ch.cur&&ch.email?[{user:ch.email,role:'Primary'}]:[];
+          res=await fetch('/api/schedules/'+ch.schedObj.schedule_id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+          if(res.ok||res.status===204)ok++;
+          else{fail++;console.warn('PUT week failed',ch.slot,ch.k,res.status,await res.text());}
+        }
       }
-    }catch(e){fail++;console.warn('Push error',ch.slot,ch.k,e);}
+    }catch(e){fail++;console.warn('Push error',ch.type,ch.slot,ch.k,e);}
     await new Promise(function(r){setTimeout(r,200);});
   }
 
