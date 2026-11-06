@@ -594,7 +594,7 @@ function loadHolidays(){
     }).length;
     var hstat=document.getElementById('hol-stat');
     if(hstat)hstat.textContent='🇧🇪 BE + 🇧🇬 BG · '+count+' holiday days';
-    buildCal();
+    buildCal();markLockedDays();
   }).catch(function(){
     var hstat=document.getElementById('hol-stat');
     if(hstat)hstat.textContent='holidays unavailable';
