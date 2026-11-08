@@ -138,12 +138,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .km-save{background:#3b82f6;border:none;color:#fff;font-weight:700;padding:9px;border-radius:5px;cursor:pointer;font-size:13px;font-family:inherit}
 .km-save:hover{background:#2563eb}
 .km-err{color:#f87171;font-size:11px;min-height:14px}
+
+.tabs{display:flex;gap:2px;margin-left:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:2px}
+.tab{font-size:12px;font-family:inherit;color:var(--muted);background:transparent;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-weight:500}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--surface);color:var(--am-text);box-shadow:0 0 0 1px var(--am);font-weight:600}
+body.view-office .fts-band,body.view-office .fts-leg{display:none}
+body.view-outoffice .band,body.view-outoffice .day-band,body.view-outoffice .sidebar{display:none}
+body.view-outoffice #btn-push,body.view-outoffice #btn-reset,body.view-outoffice #btn-export{display:none}
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>AlertOps On-Call Scheduler</h1>
+  <div class="tabs" id="tabs">
+    <button class="tab" data-view="all">All</button>
+    <button class="tab" data-view="office">Office Hours</button>
+    <button class="tab" data-view="outoffice">Out Office Hours</button>
+  </div>
   <span class="badge" id="badge">Loading…</span>
   <span class="badge" id="hol-stat" style="color:var(--muted)">loading holidays…</span>
   <div class="spacer"></div>
@@ -185,12 +198,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <div class="li"><div class="ld" style="background:#FAD70B;border:1px solid #ccc"></div>BE – Belgium</div>
         <div class="li"><div class="ld" style="background:#007B5E"></div>BG – Bulgaria</div>
         <div class="li" style="font-weight:600;margin-top:6px;color:var(--text)">Bands (chronological)</div>
-        <div class="li"><div class="ld" style="background:var(--border2)"></div>EVE 00:01-01:00</div>
-        <div class="li"><div class="ld" style="background:var(--border2)"></div>NIGHT 01:00-08:00</div>
+        <div class="li fts-leg"><div class="ld" style="background:var(--border2)"></div>EVE 00:01-01:00</div>
+        <div class="li fts-leg"><div class="ld" style="background:var(--border2)"></div>NIGHT 01:00-08:00</div>
         <div class="li"><div class="ld" style="background:var(--am)"></div>AM 08:00-13:00</div>
         <div class="li"><div class="ld" style="background:var(--pm)"></div>PM 13:00-18:00</div>
-        <div class="li"><div class="ld" style="background:#c8e6c9"></div>DAY 08:00-18:00 (wknd)</div>
-        <div class="li"><div class="ld" style="background:var(--border2)"></div>EVE 18:00-23:59</div>
+        <div class="li fts-leg"><div class="ld" style="background:#c8e6c9"></div>DAY 08:00-18:00 (wknd)</div>
+        <div class="li fts-leg"><div class="ld" style="background:var(--border2)"></div>EVE 18:00-23:59</div>
       </div>
     </div>
   </div>
@@ -1353,6 +1366,27 @@ document.getElementById("scroller").addEventListener("scroll",updateRange);
     if(!e.target.closest('.fts-chip[data-ooo-from]'))tip.style.display='none';
   });
 })();
+
+/* ── View tabs ── */
+var VIEWS=['all','office','outoffice'];
+function viewFromHash(){var h=(location.hash||'').replace('#','');return VIEWS.indexOf(h)!==-1?h:'all';}
+function setView(v){
+  if(VIEWS.indexOf(v)===-1)v='all';
+  var sc=document.getElementById('scroller');
+  var anchor=null;
+  if(sc){var top=sc.scrollTop;sc.querySelectorAll('.week-row').forEach(function(r){if(!anchor&&r.offsetTop+r.offsetHeight>top+30)anchor=r;});}
+  VIEWS.forEach(function(x){document.body.classList.remove('view-'+x);});
+  document.body.classList.add('view-'+v);
+  document.querySelectorAll('#tabs .tab').forEach(function(t){t.classList.toggle('active',t.dataset.view===v);});
+  if(location.hash!=='#'+v)history.replaceState(null,'','#'+v);
+  if(anchor)anchor.scrollIntoView({block:'start'});
+  updateRange();
+}
+document.getElementById('tabs').addEventListener('click',function(e){
+  var b=e.target.closest('.tab');if(b)setView(b.dataset.view);
+});
+window.addEventListener('hashchange',function(){setView(viewFromHash());});
+setView(viewFromHash());
 
 /* ── Boot ── */
 initAuth().then(function(){
