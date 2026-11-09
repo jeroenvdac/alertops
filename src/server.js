@@ -8,6 +8,10 @@ const PORT = process.env.PORT || 3000;
 
 const ALERTOPS_BASE = 'https://app.alertops.com/api/v2';
 const GROUP_ID = process.env.GROUP_ID;
+function gid(req) {
+  const g = String(req.headers['x-group-id'] || req.query.groupId || '').trim();
+  return /^\d+$/.test(g) ? g : GROUP_ID;
+}
 
 app.use(cors());
 app.use(express.json());
@@ -40,12 +44,18 @@ app.get('/api/config', (req, res) => {
 
 // GET /api/schedules → GET /schedules/:groupId
 app.get('/api/schedules', (req, res) => {
-  proxyRequest(req, res, 'GET', `/schedules/${GROUP_ID}`);
+  proxyRequest(req, res, 'GET', `/schedules/${gid(req)}`);
+});
+
+// GET /api/groups → GET /groups
+app.get('/api/groups', (req, res) => {
+  const qs = new URLSearchParams(req.query).toString();
+  proxyRequest(req, res, 'GET', '/groups' + (qs ? '?' + qs : ''));
 });
 
 // GET /api/members → GET /groups/:groupId/members
 app.get('/api/members', (req, res) => {
-  proxyRequest(req, res, 'GET', `/groups/${GROUP_ID}/members`);
+  proxyRequest(req, res, 'GET', `/groups/${gid(req)}/members`);
 });
 
 // POST /api/schedules → POST /schedules
@@ -55,12 +65,12 @@ app.post('/api/schedules', (req, res) => {
 
 // PUT /api/schedules/:id → PUT /schedules/:groupId/:id
 app.put('/api/schedules/:id', (req, res) => {
-  proxyRequest(req, res, 'PUT', `/schedules/${GROUP_ID}/${req.params.id}`, req.body);
+  proxyRequest(req, res, 'PUT', `/schedules/${gid(req)}/${req.params.id}`, req.body);
 });
 
 // DELETE /api/schedules/:id → DELETE /schedules/:groupId/:id
 app.delete('/api/schedules/:id', (req, res) => {
-  proxyRequest(req, res, 'DELETE', `/schedules/${GROUP_ID}/${req.params.id}`);
+  proxyRequest(req, res, 'DELETE', `/schedules/${gid(req)}/${req.params.id}`);
 });
 
 // POST /api/push-am-pm → create all shifts with 200ms delay between calls

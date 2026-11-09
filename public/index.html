@@ -146,6 +146,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 body.view-office .fts-band,body.view-office .fts-leg{display:none}
 body.view-outoffice .band,body.view-outoffice .day-band,body.view-outoffice .sidebar{display:none}
 body.view-outoffice #btn-push,body.view-outoffice #btn-reset,body.view-outoffice #btn-export{display:none}
+
+.pf{position:relative;display:flex;align-items:center;gap:6px}
+.pf-title{font-size:11px;color:var(--muted)}
+.pf-btn{display:flex;align-items:center;gap:8px;min-width:150px;justify-content:space-between;background:var(--surface);color:var(--text)}
+.pf-caret{font-size:10px;color:var(--muted)}
+.pf-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;width:230px;max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--border2);border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:6px;z-index:6000}
+.pf.open .pf-panel{display:block}
+.pf-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;font-size:12px;-webkit-user-select:none;user-select:none}
+.pf-item:hover{background:var(--surface2)}
+.pf-item.all{font-weight:700;border-bottom:1px solid var(--border);border-radius:4px 4px 0 0;margin-bottom:4px}
+.pf-item input{cursor:pointer}
+.pf-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pf-hide{visibility:hidden}
+.pf-item.me{font-weight:700}
+.pf-you{font-size:10px;font-weight:600;opacity:.8}
+.gsel{font-size:12px;font-family:inherit;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);max-width:260px}
 </style>
 </head>
 <body>
@@ -157,6 +173,7 @@ body.view-outoffice #btn-push,body.view-outoffice #btn-reset,body.view-outoffice
     <button class="tab" data-view="office">Office Hours</button>
     <button class="tab" data-view="outoffice">Out Office Hours</button>
   </div>
+  <select id="group-sel" class="gsel" style="display:none" title="Group"></select>
   <span class="badge" id="badge">Loading…</span>
   <span class="badge" id="hol-stat" style="color:var(--muted)">loading holidays…</span>
   <div class="spacer"></div>
@@ -165,6 +182,11 @@ body.view-outoffice #btn-push,body.view-outoffice #btn-reset,body.view-outoffice
 
 <div class="toolbar">
   <div class="range" id="range">&nbsp;</div>
+  <div class="pf" id="pf">
+    <span class="pf-title">Show shifts of</span>
+    <button class="tbtn pf-btn" id="pf-btn" type="button"><span id="pf-label">All selected</span><span class="pf-caret">&#9662;</span></button>
+    <div class="pf-panel" id="pf-panel"><div id="pf-list"></div></div>
+  </div>
   <button class="tbtn primary" id="btn-today">Today</button>
   <button class="tbtn" id="btn-top">Start</button>
   <button class="tbtn" id="btn-end">End</button>
@@ -264,7 +286,7 @@ function _writeDebugComment(entry){
 window.fetch=function(url,opts){
   opts=opts||{};
   var isApi=typeof url==='string'&&url.startsWith('/api/');
-  if(isApi){var k=_getKey();if(k)opts=Object.assign({},opts,{headers:Object.assign({},opts.headers||{},{'x-alertops-key':k})});}
+  if(isApi){var k=_getKey();var _h={};if(k)_h['x-alertops-key']=k;if(CURRENT_GROUP)_h['x-group-id']=String(CURRENT_GROUP);opts=Object.assign({},opts,{headers:Object.assign({},_h,opts.headers||{})});}
   var t0=Date.now();
   var method=(opts.method||'GET').toUpperCase();
   var now=new Date();
@@ -307,6 +329,7 @@ function showLoginModal(onDone){
   function doLogin(){
     var user = document.getElementById('lm-user').value.trim();
     var pass = document.getElementById('lm-pass').value;
+    window._loginUser = user.toLowerCase();
     if(!user || !pass){ document.getElementById('lm-err').textContent = 'Vul gebruikersnaam en wachtwoord in.'; return; }
     document.getElementById('lm-save').disabled = true;
     document.getElementById('lm-err').textContent = '';
@@ -328,6 +351,7 @@ function showLoginModal(onDone){
       fetch(meUrl, {
         headers: {'Authorization': 'Bearer ' + _jwtToken}
       }).then(function(r){ return r.json(); }).then(function(profile){
+        if(profile){window._roles=profile.roles||[];window._myUserId=String(profile.user_id||userId||'');}
         if(profile && profile.user_api_key){
           _cachedKey = profile.user_api_key;
         } else {
@@ -523,7 +547,7 @@ function makeFtsBand(rowDef,weekMonday){
         var oooEntry=getOOOEntryForTime(rot.primary,actualDay,hours[0],hours[1]);
         var ooCover=oooEntry?oooEntry.cover:null;
         var chip=document.createElement("div");
-        chip.className="fts-chip";
+        chip.className="fts-chip";chip.dataset.person=rot.primary;chip.dataset.cover=ooCover||"";
         if(ooCover&&oooEntry){
           var bSts=getBandTs(actualDay,hours[0]),bEts=getBandTs(actualDay,hours[1]);
           var ratio=calcOverlapRatio(oooEntry,bSts,bEts);
@@ -548,7 +572,7 @@ function makeFtsBand(rowDef,weekMonday){
         var oooEntry=getOOOEntryForTime(rot.primary,actualDay,hours[0],hours[1]);
         var ooCover=oooEntry?oooEntry.cover:null;
         var chip=document.createElement("div");
-        chip.className="fts-chip";
+        chip.className="fts-chip";chip.dataset.person=rot.primary;chip.dataset.cover=ooCover||"";
         if(ooCover&&oooEntry){
           var bSts=getBandTs(actualDay,hours[0]),bEts=getBandTs(actualDay,hours[1]);
           var ratio=calcOverlapRatio(oooEntry,bSts,bEts);
@@ -625,6 +649,7 @@ function hideLoading(){var el=document.getElementById('loading-overlay');if(el)e
 
 async function loadFromAPI(){
   showLoading('Connecting to AlertsOps…');
+  if(!CURRENT_GROUP){try{var c0=await fetch('/api/config');if(c0.ok){var c0j=await c0.json();CURRENT_GROUP=String(c0j.groupId||'')||null;}}catch(e){}}
   document.getElementById('badge').textContent='Loading…';
   try{
     showLoading('Loading members…');
@@ -704,7 +729,7 @@ async function loadFromAPI(){
 
       // Verleng kalender t/m 2035 met lege weken
       var extendTo=new Date('2035-12-29');
-      var lastKnown=WEEKS.length?fromKey(WEEKS[WEEKS.length-1]):getMon(new Date());
+      var lastKnown=WEEKS.length?fromKey(WEEKS[WEEKS.length-1]):addDays(getMon(new Date()),-7);
       var extCur=addDays(lastKnown,7);
       while(extCur<=extendTo){
         var extKey=toKey(extCur);
@@ -736,7 +761,7 @@ async function loadFromAPI(){
       // Bepaal date range: vroegste week t/m laatste week + 7 dagen
       var firstWeek=WEEKS[0], lastWeek=WEEKS[WEEKS.length-1];
       var oooStart=firstWeek, oooEnd=toKey(addDays(fromKey(lastWeek),6));
-      var oooRes=await fetch('/api/v3/ooo?startDate='+oooStart+'&endDate='+oooEnd+'&groupId=29931',{
+      var oooRes=await fetch('/api/v3/ooo?startDate='+oooStart+'&endDate='+oooEnd+'&groupId='+(CURRENT_GROUP||'29931'),{
         headers:{'Authorization':'Bearer '+_jwtToken}
       });
       if(oooRes.ok){
@@ -771,7 +796,7 @@ async function loadFromAPI(){
     var groupId='';
     if(cfgRes.ok){var cfg=await cfgRes.json();groupId=cfg.groupId||'';}
 
-    document.getElementById('badge').textContent='JER-OnCall'+(groupId?' · group '+groupId:'')+' · live';
+    document.getElementById('badge').textContent=(CURRENT_GROUP_NAME||'Group')+' · group '+(CURRENT_GROUP||groupId)+' · live';
     document.getElementById('stat').textContent=WEEKS.length+' weeks';
   }catch(e){
     document.getElementById('badge').textContent='Error loading data';
@@ -830,7 +855,7 @@ function buildCal(){
         pill.className="pill"+(stats.isFull?" ooo":"");
         var bg=stats.isMaj&&cover?personColor(cover):personColor(who);
         pill.style.background=bg;pill.style.borderColor=bg;pill.style.color="#212529";pill.style.fontWeight="600";
-        pill.dataset.name=who;pill.dataset.key=k;pill.dataset.slot=slot;
+        pill.dataset.name=who;pill.dataset.key=k;pill.dataset.slot=slot;pill.dataset.cover=(stats.ratio>0&&cover)?cover:"";
         var nameHtml=stats.isFull?'<s>'+who+'</s>':who;
         pill.innerHTML='<span>'+slot.toUpperCase()+': '+nameHtml+'</span><span class="x" data-clear="1">&times;</span>';
         band.appendChild(pill);
@@ -939,7 +964,7 @@ function buildCal(){
     row.appendChild(slots);
     sc.appendChild(row);
   });
-  sc.scrollTop=keep;
+  applyPersonFilter();sc.scrollTop=keep;
   updateRange();
 }
 
@@ -1216,7 +1241,7 @@ async function pushSchedule(){
         if(ch.isNew&&ch.cur&&ch.email){
           // POST nieuw dag-schedule
           var body={
-            group:'29931',
+            group:String(CURRENT_GROUP||'29931'),
             schedule_name:(isAm?'AM':'PM')+' '+ch.dayKey,
             schedule_type:'Fixed',
             continuous:false,
@@ -1287,7 +1312,7 @@ async function pushSchedule(){
           var isAm=ch.slot==='am';
           var endDay=toKey(addDays(fromKey(ch.k),4));
           var body={
-            group:'29931',
+            group:String(CURRENT_GROUP||'29931'),
             schedule_name:(isAm?'AM':'PM')+' '+ch.k,
             schedule_type:'Fixed',
             continuous:false,
@@ -1341,7 +1366,7 @@ document.getElementById("btn-reset").onclick=function(){SCHEDULE=JSON.parse(JSON
 document.getElementById("btn-push").onclick=pushSchedule;
 document.getElementById("btn-export").onclick=function(){
   var out=WEEKS.map(function(k){var s=SCHEDULE[k]||{};return{week_start:k,am:s.am||null,pm:s.pm||null};});
-  var blob=new Blob([JSON.stringify({group_id:29931,timezone:"(UTC+01:00) Brussels, Copenhagen, Madrid, Paris",am:"08:00-13:00",pm:"13:00-18:00",weeks:out},null,2)],{type:"application/json"});
+  var blob=new Blob([JSON.stringify({group_id:Number(CURRENT_GROUP||29931),timezone:"(UTC+01:00) Brussels, Copenhagen, Madrid, Paris",am:"08:00-13:00",pm:"13:00-18:00",weeks:out},null,2)],{type:"application/json"});
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="rotation.json";a.click();
   toast("rotation.json downloaded");
 };
@@ -1388,6 +1413,171 @@ document.getElementById('tabs').addEventListener('click',function(e){
 window.addEventListener('hashchange',function(){setView(viewFromHash());});
 setView(viewFromHash());
 
+/* ── Person filter ── */
+var PF_SEL={}, PF_NAMES=[];
+function pfNames(){return PEOPLE_BASE.map(function(p){return p.name;}).sort(function(a,b){return a.localeCompare(b);});}
+function pfSelected(){return PF_NAMES.filter(function(n){return PF_SEL[n];});}
+function pfOk(n){
+  if(!n)return false;
+  if(PF_NAMES.indexOf(n)===-1)return pfSelected().length===PF_NAMES.length;
+  return !!PF_SEL[n];
+}
+function pfLabel(){
+  var sel=pfSelected().length,tot=PF_NAMES.length;
+  var lbl=document.getElementById('pf-label');
+  if(lbl)lbl.textContent=(sel===tot)?'All selected ('+tot+')':(sel===0?'None selected':sel+' of '+tot+' selected');
+  var all=document.getElementById('pf-all');
+  if(all){all.checked=(sel===tot&&tot>0);all.indeterminate=(sel>0&&sel<tot);}
+}
+function pfBuild(){
+  var names=pfNames();
+  names.forEach(function(n){if(PF_NAMES.indexOf(n)===-1)PF_SEL[n]=true;});
+  PF_NAMES=names;
+  var list=document.getElementById('pf-list');
+  if(!list)return;
+  list.innerHTML='';
+  var all=document.createElement('label');all.className='pf-item all';
+  all.innerHTML='<input type="checkbox" id="pf-all"><span>Select all</span>';
+  list.appendChild(all);
+  names.forEach(function(n){
+    var l=document.createElement('label');l.className='pf-item';
+    var cb=document.createElement('input');cb.type='checkbox';cb.dataset.name=n;cb.checked=!!PF_SEL[n];
+    var dot=document.createElement('span');dot.className='pf-dot';dot.style.background=personColor(n);
+    var t=document.createElement('span');t.textContent=n;
+    var pObj=PEOPLE_BASE.find(function(p){return p.name===n;});
+    if(pObj&&window._loginUser&&String(pObj.user||'').toLowerCase()===window._loginUser){
+      l.classList.add('me');t.textContent=n+' ';
+      var you=document.createElement('span');you.className='pf-you';you.textContent='(you)';t.appendChild(you);
+    }
+    l.appendChild(cb);l.appendChild(dot);l.appendChild(t);
+    list.appendChild(l);
+  });
+  pfLabel();
+}
+function applyPersonFilter(){
+  if(pfNames().join('|')!==PF_NAMES.join('|'))pfBuild();
+  var everyone=(pfSelected().length===PF_NAMES.length);
+  document.querySelectorAll('.pill[data-name],.day-pill[data-name]').forEach(function(p){
+    var show=everyone||pfOk(p.dataset.name)||(p.dataset.cover&&pfOk(p.dataset.cover));
+    p.classList.toggle('pf-hide',!show);
+    if(p.classList.contains('pill')&&p.parentNode){
+      var cov=p.parentNode.querySelector('.ooo-cover');
+      if(cov)cov.classList.toggle('pf-hide',!show);
+    }
+  });
+  document.querySelectorAll('.fts-chip[data-person]').forEach(function(c){
+    var show=everyone||pfOk(c.dataset.person)||(c.dataset.cover&&pfOk(c.dataset.cover));
+    c.classList.toggle('pf-hide',!show);
+  });
+}
+document.getElementById('pf-btn').addEventListener('click',function(e){
+  e.stopPropagation();
+  document.getElementById('pf').classList.toggle('open');
+});
+document.getElementById('pf-panel').addEventListener('click',function(e){e.stopPropagation();});
+document.getElementById('pf-panel').addEventListener('change',function(e){
+  var t=e.target;
+  if(t.id==='pf-all'){
+    PF_NAMES.forEach(function(n){PF_SEL[n]=t.checked;});
+    document.querySelectorAll('#pf-list input[data-name]').forEach(function(cb){cb.checked=t.checked;});
+  }else if(t.dataset.name){
+    PF_SEL[t.dataset.name]=t.checked;
+  }
+  pfLabel();applyPersonFilter();
+});
+document.addEventListener('click',function(){document.getElementById('pf').classList.remove('open');});
+
+/* ── Group selector ── */
+var CURRENT_GROUP=null, CURRENT_GROUP_NAME='', GROUPS=[];
+function isAppAdmin(){return (window._roles||[]).indexOf('App Admin')!==-1;}
+async function fetchAllGroups(){
+  var all=[],off=0;
+  for(var i=0;i<50;i++){
+    var r=await fetch('/api/groups?limit=100&offset='+off);
+    if(!r.ok)break;
+    var d=await r.json();
+    var g=Array.isArray(d)?d:(d.groups||[]);
+    if(!g.length)break;
+    all=all.concat(g);
+    var step=(d&&d.limit)||g.length;
+    if(g.length<step)break;
+    off+=step;
+  }
+  var seen={};
+  return all.filter(function(x){if(seen[x.group_id])return false;seen[x.group_id]=1;return true;});
+}
+async function isMemberOf(gid){
+  try{
+    var r=await fetch('/api/members',{headers:{'x-group-id':String(gid)}});
+    if(!r.ok)return false;
+    var d=await r.json();
+    var list=Array.isArray(d)?d:(d.members||d.data||[]);
+    var me=String(window._myUserId||''),em=String(window._loginUser||'').toLowerCase();
+    return list.some(function(m){
+      return (me&&String(m.member_id||'')===me)||(em&&String(m.member||m.user||'').toLowerCase()===em);
+    });
+  }catch(e){return false;}
+}
+function updateGroupBadge(){
+  var b=document.getElementById('badge');
+  if(b&&CURRENT_GROUP)b.textContent=(CURRENT_GROUP_NAME||'Group')+' · group '+CURRENT_GROUP+' · live';
+}
+async function loadGroups(){
+  var sel=document.getElementById('group-sel');
+  try{
+    var all=await fetchAllGroups();
+    var list=all;
+    if(!isAppAdmin()){
+      list=[];
+      for(var i=0;i<all.length;i+=5){
+        var chunk=all.slice(i,i+5);
+        var res=await Promise.all(chunk.map(function(g){return isMemberOf(g.group_id);}));
+        chunk.forEach(function(g,j){if(res[j])list.push(g);});
+      }
+    }
+    list.sort(function(a,b){return String(a.group_name).localeCompare(String(b.group_name));});
+    GROUPS=list;
+    sel.innerHTML='';
+    list.forEach(function(g){
+      var o=document.createElement('option');
+      o.value=String(g.group_id);o.textContent=g.group_name;
+      sel.appendChild(o);
+    });
+    sel.style.display=list.length?'':'none';
+    var cur=list.find(function(g){return String(g.group_id)===String(CURRENT_GROUP);});
+    if(cur){
+      CURRENT_GROUP_NAME=cur.group_name;sel.value=String(cur.group_id);updateGroupBadge();
+    }else if(list.length){
+      sel.value=String(list[0].group_id);
+      await switchGroup(list[0].group_id,true);
+    }
+  }catch(e){console.warn('loadGroups error',e);}
+}
+function hasUnpushed(){
+  return WEEKS.some(function(k){
+    return JSON.stringify(SCHEDULE[k]||{})!==JSON.stringify(DEFAULT_SCHEDULE[k]||{});
+  });
+}
+async function switchGroup(id,silent){
+  id=String(id);
+  if(id===String(CURRENT_GROUP))return;
+  var sel=document.getElementById('group-sel');
+  if(!silent&&hasUnpushed()&&!confirm('Er zijn niet-gepushte wijzigingen. Wisselen van groep gooit ze weg. Doorgaan?')){
+    sel.value=String(CURRENT_GROUP);return;
+  }
+  var g=GROUPS.find(function(x){return String(x.group_id)===id;});
+  CURRENT_GROUP=id;CURRENT_GROUP_NAME=g?g.group_name:'';
+  PEOPLE_BASE=[];SCHEDULE={};DEFAULT_SCHEDULE={};WEEKS=[];FTS_BANDS=[];
+  OOO_MAP={};AM_PM_SCHEDULES={};MEMBER_MAP={};USER_ID_MAP={};HOLIDAYS={};
+  await loadFromAPI();
+  render();
+  loadHolidays();
+  var t=document.querySelector('.week-row.today-week');
+  if(t)t.scrollIntoView({block:'center'});
+  updateGroupBadge();
+}
+document.getElementById('group-sel').addEventListener('change',function(){switchGroup(this.value);});
+
 /* ── Boot ── */
 initAuth().then(function(){
   return ensureJwt();
@@ -1396,6 +1586,7 @@ initAuth().then(function(){
 }).then(function(){
   render();
   loadHolidays();
+  if(!window._groupsLoaded){window._groupsLoaded=true;loadGroups();}
   var t=document.querySelector(".week-row.today-week");
   if(t)t.scrollIntoView({block:"center"});
 });
