@@ -248,11 +248,11 @@ body.view-outoffice #btn-push,body.view-outoffice #btn-reset,body.view-outoffice
 
 <div id="login-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:10001">
   <div class="km-box">
-    <div class="km-title">AlertOps Login</div>
-    <div class="km-hint">Je sessie verloopt na ~8u. Credentials worden nergens opgeslagen.</div>
-    <input id="lm-user" class="km-input" type="text" placeholder="gebruikersnaam@accenture.com" value="jeroen.van.daele@accenture.com" autocomplete="username">
-    <input id="lm-pass" class="km-input" type="password" placeholder="Wachtwoord" autocomplete="current-password" style="margin-top:8px">
-    <button id="lm-save" class="km-save" style="margin-top:8px">Inloggen</button>
+    <div class="km-title">AlertOps sign in</div>
+    <div class="km-hint">Your API key is kept in memory only. It’s gone when you close or reload this page.</div>
+    <input id="lm-user" class="km-input" type="text" placeholder="name@accenture.com" autocomplete="off">
+    <input id="lm-pass" class="km-input" type="password" placeholder="Paste your AlertOps API key" autocomplete="off" style="margin-top:8px">
+    <button id="lm-save" class="km-save" style="margin-top:8px">Sign in</button>
     <div id="lm-err" class="km-err"></div>
   </div>
 </div>
@@ -308,15 +308,7 @@ window.fetch=function(url,opts){
   });
 };
 function initAuth(){
-  return Promise.resolve(); // login modal in ensureJwt doet alles
-}
-
-/* ── JWT / v3 auth ── */
-var _jwtToken = null;
-var _jwtExpiry = 0;
-
-function _isJwtValid(){
-  return _jwtToken && Date.now() < _jwtExpiry - 60000; // 1 min marge
+  return Promise.resolve(); // login modal in ensureLogin doet alles
 }
 
 function showLoginModal(onDone){
@@ -324,58 +316,49 @@ function showLoginModal(onDone){
   modal.style.display = 'flex';
   document.getElementById('lm-err').textContent = '';
   document.getElementById('lm-pass').value = '';
-  document.getElementById('lm-pass').focus();
+  document.getElementById('lm-save').disabled = false;
+  document.getElementById('lm-user').focus();
+
+  function fail(msg){
+    document.getElementById('lm-save').disabled = false;
+    document.getElementById('lm-err').textContent = msg;
+  }
 
   function doLogin(){
     var user = document.getElementById('lm-user').value.trim();
-    var pass = document.getElementById('lm-pass').value;
-    window._loginUser = user.toLowerCase();
-    if(!user || !pass){ document.getElementById('lm-err').textContent = 'Vul gebruikersnaam en wachtwoord in.'; return; }
+    var key = document.getElementById('lm-pass').value.trim();
+    if(!user || !key){ document.getElementById('lm-err').textContent = 'Enter your email and API key.'; return; }
     document.getElementById('lm-save').disabled = true;
     document.getElementById('lm-err').textContent = '';
-    fetch('/api/v3/login', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({account:'acn-cloudfirst', user_name:user, password:pass})
-    }).then(function(r){ return r.json(); }).then(function(data){
+    fetch('/api/me?username=' + encodeURIComponent(user), {
+      headers: {'x-alertops-key': key}
+    }).then(function(r){
+      if(r.status === 401 || r.status === 403 || r.status === 404){ throw new Error('That email and key don’t match. Check both and try again.'); }
+      if(!r.ok){ throw new Error('AlertOps returned an error (' + r.status + '). Try again.'); }
+      return r.json();
+    }).then(function(profile){
+      if(!profile || String(profile.user_api_key || '') !== key){ throw new Error('That key doesn’t match this user. Check the key and try again.'); }
+      _cachedKey = key;
+      window._loginUser = String(profile.user_name || user).toLowerCase();
+      window._roles = profile.roles || [];
+      window._myUserId = String(profile.user_id || '');
+      document.getElementById('lm-pass').value = '';
       document.getElementById('lm-save').disabled = false;
-      if(!data.token){ document.getElementById('lm-err').textContent = 'Login mislukt: ' + (data.message || JSON.stringify(data)); return; }
-      _jwtToken = data.token;
-      try{
-        var payload = JSON.parse(atob(_jwtToken.split('.')[1]));
-        _jwtExpiry = payload.exp * 1000;
-      }catch(e){ _jwtExpiry = Date.now() + 8*3600*1000; }
-      // Haal api-key op via user profile (user_id komt uit login response)
-      var userId = data.user_id || '';
-      var meUrl = '/api/v3/me?username=' + encodeURIComponent(user) + (userId ? '&user_id=' + encodeURIComponent(userId) : '');
-      fetch(meUrl, {
-        headers: {'Authorization': 'Bearer ' + _jwtToken}
-      }).then(function(r){ return r.json(); }).then(function(profile){
-        if(profile){window._roles=profile.roles||[];window._myUserId=String(profile.user_id||userId||'');}
-        if(profile && profile.user_api_key){
-          _cachedKey = profile.user_api_key;
-        } else {
-          console.warn('user_api_key niet gevonden in profiel');
-        }
-        modal.style.display = 'none';
-        if(onDone) onDone();
-      }).catch(function(){
-        modal.style.display = 'none';
-        if(onDone) onDone();
-      });
+      modal.style.display = 'none';
+      if(onDone) onDone();
     }).catch(function(err){
-      document.getElementById('lm-save').disabled = false;
-      document.getElementById('lm-err').textContent = 'Fout: ' + err.message;
+      fail(err.message || 'Something went wrong. Try again.');
     });
   }
 
   document.getElementById('lm-save').onclick = doLogin;
   document.getElementById('lm-pass').onkeydown = function(e){ if(e.key==='Enter') doLogin(); };
+  document.getElementById('lm-user').onkeydown = function(e){ if(e.key==='Enter') doLogin(); };
 }
 
-function ensureJwt(){
+function ensureLogin(){
   return new Promise(function(resolve){
-    if(_isJwtValid()){ resolve(); return; }
+    if(_getKey()){ resolve(); return; }
     showLoginModal(resolve);
   });
 }
@@ -746,7 +729,7 @@ async function loadFromAPI(){
     // Fetch OOO via v3 group endpoint (één call voor hele groep)
     showLoading('Loading out-of-office…');
     OOO_MAP={};
-    await ensureJwt();
+    await ensureLogin();
     try{
       // Bouw lookup: volledige naam → verkorte naam (via MEMBER_MAP)
       var fullToShort={};
@@ -762,7 +745,7 @@ async function loadFromAPI(){
       var firstWeek=WEEKS[0], lastWeek=WEEKS[WEEKS.length-1];
       var oooStart=firstWeek, oooEnd=toKey(addDays(fromKey(lastWeek),6));
       var oooRes=await fetch('/api/v3/ooo?startDate='+oooStart+'&endDate='+oooEnd+'&groupId='+(CURRENT_GROUP||'29931'),{
-        headers:{'Authorization':'Bearer '+_jwtToken}
+        headers:{'x-api-key':_getKey()}
       });
       if(oooRes.ok){
         var oooList=await oooRes.json();
@@ -1580,7 +1563,7 @@ document.getElementById('group-sel').addEventListener('change',function(){switch
 
 /* ── Boot ── */
 initAuth().then(function(){
-  return ensureJwt();
+  return ensureLogin();
 }).then(function(){
   return loadFromAPI();
 }).then(function(){

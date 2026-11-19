@@ -42,6 +42,13 @@ app.get('/api/config', (req, res) => {
   res.json({ groupId: GROUP_ID });
 });
 
+// GET /api/me?username=... -> GET /users/:username (validates the key, returns the profile)
+app.get('/api/me', (req, res) => {
+  const username = String(req.query.username || '').trim();
+  if (!username) return res.status(400).json({ error: 'No username' });
+  proxyRequest(req, res, 'GET', '/users/' + encodeURIComponent(username));
+});
+
 // GET /api/schedules → GET /schedules/:groupId
 app.get('/api/schedules', (req, res) => {
   proxyRequest(req, res, 'GET', `/schedules/${gid(req)}`);
@@ -124,29 +131,14 @@ app.delete("/api/ooo/:userId/:oooId", (req, res) => {
   proxyRequest(req, res, "DELETE", "/users/" + req.params.userId + "/out_of_office/" + req.params.oooId);
 });
 
-// POST /api/v3/login → POST https://app.alertops.com/api/v2/auth/login
-app.post('/api/v3/login', async (req, res) => {
-  try {
-    const upstream = await fetch('https://app.alertops.com/api/v2/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body)
-    });
-    const data = await upstream.json();
-    res.status(upstream.status).json(data);
-  } catch (err) {
-    res.status(502).json({ error: 'Login failed', detail: err.message });
-  }
-});
-
 // GET /api/v3/ooo → GET https://app.alertops.com/api/v3/users/out_of_office
 app.get('/api/v3/ooo', async (req, res) => {
-  const token = req.headers['authorization'];
-  if (!token) return res.status(401).json({ error: 'No token' });
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey) return res.status(401).json({ error: 'No API key provided' });
   try {
     const qs = new URLSearchParams(req.query).toString();
     const upstream = await fetch(`https://app.alertops.com/api/v3/users/out_of_office?${qs}`, {
-      headers: { 'Authorization': token }
+      headers: { 'x-api-key': apiKey }
     });
     const data = await upstream.json();
     res.status(upstream.status).json(data);
@@ -154,30 +146,6 @@ app.get('/api/v3/ooo', async (req, res) => {
     res.status(502).json({ error: 'OOO fetch failed', detail: err.message });
   }
 });
-
-// GET /api/v3/me → haal user_api_key op via JWT
-app.get('/api/v3/me', async (req, res) => {
-  const token = req.headers['authorization'];
-  if (!token) return res.status(401).json({ error: 'No token' });
-  const username = req.query.username;
-  if (!username) return res.status(400).json({ error: 'No username' });
-  try {
-    const userId = req.query.user_id;
-    const path = userId ? userId : encodeURIComponent(username);
-    const upstream = await fetch(`https://app.alertops.com/api/v2/users/${path}`, {
-      headers: {
-        'Authorization': token,
-        'Referer': `https://app.alertops.com/acn-cloudfirst/users/edit/${path}`,
-        'Accept': 'application/json, text/plain, */*'
-      }
-    });
-    const data = await upstream.json();
-    res.status(upstream.status).json(data);
-  } catch (err) {
-    res.status(502).json({ error: 'User fetch failed', detail: err.message });
-  }
-});
-
 
 app.listen(PORT, () => {
   console.log(`AlertOps proxy listening on port ${PORT}`);
