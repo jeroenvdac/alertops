@@ -1339,7 +1339,18 @@ async function pushSchedule(){
           }else{fail++;console.warn('POST week failed',ch.slot,ch.k,res.status,await res.text());}
         }else{
           var body=JSON.parse(JSON.stringify(ch.schedObj));
-          body.users=ch.cur&&ch.email?[{user:ch.email,role:'Primary'}]:[];
+          if(!ch.cur){
+            // slot cleared: AlertOps refuses an empty Fixed schedule, so delete it
+            res=await fetch('/api/schedules/'+ch.schedObj.schedule_id,{method:'DELETE'});
+            if(res.ok||res.status===204||res.status===404){
+              ok++;
+              if(AM_PM_SCHEDULES[ch.k])delete AM_PM_SCHEDULES[ch.k][ch.slot];
+            }else{fail++;console.warn('DELETE week failed',ch.slot,ch.k,res.status,await res.text());}
+            await new Promise(function(r){setTimeout(r,200);});
+            continue;
+          }
+          if(!ch.email){fail++;console.warn('Skipping week PUT (no email resolved)',ch.slot,ch.k,ch.cur);continue;}
+          body.users=[{user:ch.email,role:'Primary'}];
           res=await fetch('/api/schedules/'+ch.schedObj.schedule_id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
           if(res.ok||res.status===204)ok++;
           else{fail++;console.warn('PUT week failed',ch.slot,ch.k,res.status,await res.text());}
